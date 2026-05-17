@@ -89,3 +89,20 @@ Render side:
 - GPU memory can become the limiting factor.
 - Raw radar products may require specialized QC/dealiasing before visualization.
 - Operational users may reject any UI that slows warning decisions.
+
+## Revised failure-mode gates
+
+Before proceeding from data ingest to renderer polish, StormDeck v0 must pass these gates:
+
+1. Case scanner verifies downloadable ATD files and scores case usefulness before selection.
+2. CfRadial truth reporter emits actual dimensions, variables, units, sweep geometry, timestamps, sector coverage, and QC caveats.
+3. Native PPI rendering proves observed reflectivity/velocity before any gridded 3D view.
+4. Geospatial validation confirms radar site, range rings, sector footprint, towns, and warning overlays align.
+5. Any interpolated/gridded view carries observed-mask and interpolation labels.
+6. Velocity views display Nyquist/aliasing context and do not imply tornado detection.
+7. Semantic storm objects are manual/provenance-labeled first; AI-derived objects are later.
+8. The “what changed” panel reports actual comparison interval and evidence, not naive frame-index deltas.
+9. Exported screenshots/video bake timestamp, radar ID, field, source, observed/interpolated/derived status, and QC caveats into the artifact.
+
+See `docs/failure-modes.md` for the step-by-step failure analysis.
+
