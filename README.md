@@ -4,11 +4,12 @@ StormDeck is a game-engine-powered 4D severe-weather interface concept for phase
 
 ## Posted specs
 
-- [Rolling interactive spec](docs/rolling-spec.html) — current source of truth for bottleneck, next action, milestones, schemas, and iteration log.
+- [Rolling interactive spec deck](docs/rolling-spec.html) — current source of truth for bottleneck, next action, milestones, schemas, and iteration log.
+- [Bryan inputs recall log](docs/bryan-inputs.md) — durable Markdown log for Bryan-provided requirements, constraints, hardware details, and future updates.
 - [Interactive ATD initial spec](stormdeck-atd-initial-spec.html)
 - [Failure-mode review](docs/failure-modes.md)
 
-The rolling spec currently prioritizes a synthetic game-engine MWE before archived radar ingest. The ATD artifact focuses on NOAA/NSSL Advanced Technology Demonstrator data output, especially public `KATD` CfRadial 1 NetCDF files from the NSSL THREDDS archive.
+The rolling spec currently prioritizes a synthetic game-engine MWE before archived radar ingest. Bryan-provided information should be recorded in `docs/bryan-inputs.md` for reliable recall. The ATD artifact focuses on NOAA/NSSL Advanced Technology Demonstrator data output, especially public `KATD` CfRadial 1 NetCDF files from the NSSL THREDDS archive.
 
 ## MVP framing
 

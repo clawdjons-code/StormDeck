@@ -3,361 +3,70 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>StormDeck Rolling Spec</title>
+<title>StormDeck Rolling Spec — Slide Deck</title>
 <style>
-  :root{
-    --bg:#061019; --panel:#0b1622; --panel2:#101f2f; --ink:#eaf4ff; --muted:#91a9c3; --line:#22394f;
-    --cyan:#4dd7ff; --green:#65f0a4; --amber:#ffd166; --red:#ff5f76; --violet:#b99cff; --orange:#ff9f5a;
-    --shadow:0 18px 60px rgba(0,0,0,.38); --radius:18px;
-  }
-  *{box-sizing:border-box} html{scroll-behavior:smooth} body{margin:0;background:radial-gradient(circle at 12% -8%,rgba(77,215,255,.16),transparent 32%),linear-gradient(180deg,#061019,#08131f 46%,#05090f);color:var(--ink);font:15px/1.55 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
-  a{color:var(--cyan)} code,pre{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace} pre{white-space:pre-wrap;background:#04080d;border:1px solid var(--line);border-radius:14px;padding:14px;overflow:auto;color:#dcecff}
-  .wrap{max-width:1000px;margin:0 auto;padding:28px 20px 70px}.page-header{padding:36px 0 20px;border-bottom:1px solid var(--line)}
-  .eyebrow{letter-spacing:.17em;text-transform:uppercase;color:var(--cyan);font-size:12px;font-weight:850}.page-header h1{font-size:clamp(38px,6vw,68px);line-height:.94;margin:12px 0 14px}.purpose{font-size:clamp(17px,2.2vw,22px);color:#c9dcf2;max-width:850px}.meta{display:flex;flex-wrap:wrap;gap:10px;margin:22px 0}.badge{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:7px 11px;border:1px solid var(--line);font-weight:850;font-size:12px;letter-spacing:.02em}.badge.pass{background:rgba(101,240,164,.12);color:#b9ffd4;border-color:rgba(101,240,164,.45)}.badge.fail{background:rgba(255,95,118,.12);color:#ffd3da;border-color:rgba(255,95,118,.45)}.badge.warn{background:rgba(255,209,102,.12);color:#ffe7a8;border-color:rgba(255,209,102,.45)}.badge.info{background:rgba(77,215,255,.12);color:#c4f4ff;border-color:rgba(77,215,255,.45)}
-  .card{background:linear-gradient(180deg,var(--panel),#07111b);border:1px solid var(--line);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow);margin:18px 0}.card h2,.card h3{margin-top:0;line-height:1.15}.muted{color:var(--muted)}
-  .pipeline{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}.pipeline-stage{position:relative;min-height:118px;padding:14px;border:1px solid var(--line);border-radius:15px;background:#0a1420}.pipeline-stage:not(:last-child):after{content:"→";position:absolute;right:-15px;top:42%;color:var(--muted);font-weight:900}.pipeline-stage strong{display:block;margin-bottom:6px}.pipeline-stage.done{border-color:rgba(101,240,164,.5);background:rgba(101,240,164,.07)}.pipeline-stage.current{border-color:rgba(255,209,102,.68);background:rgba(255,209,102,.09);box-shadow:0 0 0 1px rgba(255,209,102,.18) inset}.pipeline-stage.pending{opacity:.82}.pipeline-stage small{color:var(--muted)}
-  .callout{border-left:4px solid var(--cyan);background:rgba(77,215,255,.08);border-radius:13px;padding:15px;margin:14px 0}.callout.warn{border-left-color:var(--amber);background:rgba(255,209,102,.09)}.callout.fail{border-left-color:var(--red);background:rgba(255,95,118,.09)}
-  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}.three-col{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.col-card{border:1px solid var(--line);background:#0a1420;border-radius:15px;padding:16px}.col-card.good{border-color:rgba(101,240,164,.42)}.col-card.bad{border-color:rgba(255,95,118,.42)}.col-card.warn{border-color:rgba(255,209,102,.42)}
-  table{width:100%;border-collapse:separate;border-spacing:0;overflow:hidden;border:1px solid var(--line);border-radius:14px;background:#07111b}th,td{text-align:left;vertical-align:top;padding:11px 12px;border-bottom:1px solid var(--line)}th{background:#102033;color:#cfe6ff;font-size:12px;text-transform:uppercase;letter-spacing:.08em}tr:last-child td{border-bottom:0}td:first-child{font-weight:750;color:#fff}
-  details{border:1px solid var(--line);border-radius:14px;background:#091421;margin:12px 0}summary{cursor:pointer;padding:13px 15px;font-weight:850;color:#dcecff}details>div{padding:0 15px 15px}.tabs{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 14px}.tabs button{border:1px solid var(--line);background:#0d1b2a;color:#d8eaff;border-radius:999px;padding:8px 11px;cursor:pointer;font-weight:800}.tabs button.active{background:var(--cyan);color:#031019;border-color:var(--cyan)}.tab-panel{display:none}.tab-panel.active{display:block}
-  .next-action{position:sticky;bottom:12px;z-index:5;border:1px solid rgba(255,209,102,.5);background:linear-gradient(180deg,rgba(42,32,9,.96),rgba(20,16,7,.96));box-shadow:var(--shadow)}.log-entry{border-left:3px solid var(--line);padding:12px 0 12px 14px;margin:0 0 12px}.log-entry.latest{border-left-color:var(--cyan);background:rgba(77,215,255,.04);border-radius:0 12px 12px 0}.log-date{color:var(--muted);font-size:12px}.log-title{font-weight:900}.log-body{color:#cfe0f4}
-  .meter{height:10px;background:#07111b;border:1px solid var(--line);border-radius:999px;overflow:hidden}.meter span{display:block;height:100%;background:linear-gradient(90deg,var(--cyan),var(--green));width:20%}.small{font-size:13px}.footer{color:var(--muted);font-size:13px;margin-top:30px}.checklist label{display:block;padding:7px 0;color:#d8eaff}.checklist input{accent-color:var(--green);margin-right:8px}
-  .topo-wrap{position:relative;border:1px solid var(--line);border-radius:18px;background:radial-gradient(circle at 50% 0%,rgba(77,215,255,.10),transparent 45%),#06101a;overflow:hidden;margin-top:14px}.topo-svg{display:block;width:100%;height:auto}.topo-node{cursor:pointer}.topo-node rect{transition:stroke .18s ease,filter .18s ease}.topo-node:hover rect{stroke:var(--cyan);filter:drop-shadow(0 0 8px rgba(77,215,255,.55))}.topo-node text{pointer-events:none}.topo-legend{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px}.legend-chip{border:1px solid var(--line);background:#0a1420;border-radius:12px;padding:10px;font-size:13px}.legend-chip b{display:block;color:#fff}.terrain-note{font-size:13px;color:var(--muted)}
-  @media(max-width:900px){.pipeline,.two-col,.three-col{grid-template-columns:1fr}.pipeline-stage:after{display:none}.next-action{position:static}}
+  :root{--bg:#050b12;--panel:#091522;--panel2:#102236;--ink:#edf7ff;--muted:#90a8c4;--line:#24415d;--cyan:#4dd7ff;--green:#65f0a4;--amber:#ffd166;--red:#ff5f76;--violet:#b99cff;--orange:#ff9f5a;--shadow:0 22px 80px rgba(0,0,0,.42);--radius:22px}
+  *{box-sizing:border-box} html{scroll-behavior:smooth} body{margin:0;background:radial-gradient(circle at 15% -10%,rgba(77,215,255,.18),transparent 32%),linear-gradient(180deg,#050b12,#07131f 44%,#03070c);color:var(--ink);font:16px/1.42 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;overflow-x:hidden}
+  a{color:var(--cyan)} code,pre{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace} pre{white-space:pre-wrap;background:#03070c;border:1px solid var(--line);border-radius:16px;padding:16px;color:#dcecff;overflow:auto;max-height:50vh}
+  .deck-shell{min-height:100vh;display:grid;grid-template-rows:auto 1fr auto}.topbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:12px;padding:10px 16px;background:rgba(5,11,18,.86);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}.brand{font-weight:950;letter-spacing:.08em;text-transform:uppercase;color:#dff7ff}.topbar nav{display:flex;gap:6px;overflow:auto;flex:1}.topbar button,.ctrl button{border:1px solid var(--line);background:#0b1928;color:#d6eaff;border-radius:999px;padding:8px 10px;cursor:pointer;font-weight:800}.topbar button.active,.ctrl button:hover{background:var(--cyan);color:#031019;border-color:var(--cyan)}.progress{height:8px;background:#07111b;border-top:1px solid var(--line)}.progress span{display:block;height:100%;background:linear-gradient(90deg,var(--cyan),var(--green));width:8.33%;transition:width .2s ease}
+  .slide{display:none;min-height:calc(100vh - 104px);padding:34px clamp(18px,5vw,70px);align-items:center}.slide.active{display:grid}.slide-inner{width:min(1180px,100%);margin:0 auto;background:linear-gradient(180deg,rgba(9,21,34,.96),rgba(5,12,20,.96));border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:clamp(24px,4vw,48px);position:relative;overflow:hidden}.slide-inner:before{content:"";position:absolute;inset:-40% auto auto 55%;width:520px;height:520px;border-radius:50%;background:radial-gradient(circle,rgba(77,215,255,.14),transparent 64%);pointer-events:none}.kicker{letter-spacing:.18em;text-transform:uppercase;color:var(--cyan);font-size:12px;font-weight:900}.slide h1{font-size:clamp(46px,7vw,86px);line-height:.9;margin:12px 0 18px}.slide h2{font-size:clamp(34px,5vw,58px);line-height:.96;margin:8px 0 20px}.slide h3{font-size:22px;margin:0 0 10px}.lead{font-size:clamp(19px,2.5vw,28px);color:#cfe3f8;max-width:900px}.muted{color:var(--muted)}.big{font-size:clamp(52px,8vw,96px);font-weight:950;line-height:.9}.badge{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:999px;padding:8px 12px;font-size:12px;font-weight:900;letter-spacing:.03em}.badge.pass{background:rgba(101,240,164,.12);color:#b9ffd4;border-color:rgba(101,240,164,.45)}.badge.fail{background:rgba(255,95,118,.12);color:#ffd3da;border-color:rgba(255,95,118,.45)}.badge.warn{background:rgba(255,209,102,.13);color:#ffe7a8;border-color:rgba(255,209,102,.5)}.badge.info{background:rgba(77,215,255,.12);color:#c4f4ff;border-color:rgba(77,215,255,.45)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}.cards{display:grid;gap:14px}.card{background:#0a1725;border:1px solid var(--line);border-radius:18px;padding:18px}.card.good{border-color:rgba(101,240,164,.45)}.card.bad{border-color:rgba(255,95,118,.45)}.card.warn{border-color:rgba(255,209,102,.45)}.callout{border-left:5px solid var(--cyan);background:rgba(77,215,255,.08);border-radius:16px;padding:17px;margin:16px 0}.callout.fail{border-left-color:var(--red);background:rgba(255,95,118,.09)}.callout.warn{border-left-color:var(--amber);background:rgba(255,209,102,.09)}
+  table{width:100%;border-collapse:separate;border-spacing:0;border:1px solid var(--line);border-radius:16px;overflow:hidden;background:#06111d}th,td{text-align:left;vertical-align:top;padding:12px;border-bottom:1px solid var(--line)}th{background:#102236;color:#d8ecff;font-size:12px;text-transform:uppercase;letter-spacing:.08em}tr:last-child td{border-bottom:0}td:first-child{font-weight:850;color:#fff}.pipeline{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}.pipeline-stage{min-height:118px;padding:14px;border:1px solid var(--line);border-radius:16px;background:#081522}.pipeline-stage.done{border-color:rgba(101,240,164,.5)}.pipeline-stage.current{border-color:rgba(255,209,102,.7);background:rgba(255,209,102,.09)}.pipeline-stage.pending{opacity:.75}.pipeline-stage strong{display:block}.pipeline-stage small{color:var(--muted)}
+  .topo-wrap{border:1px solid var(--line);border-radius:20px;background:#06101a;overflow:hidden}.topo-svg{display:block;width:100%;height:auto}.topo-node{cursor:pointer}.topo-node rect{transition:stroke .18s ease,filter .18s ease}.topo-node:hover rect{stroke:var(--cyan);filter:drop-shadow(0 0 8px rgba(77,215,255,.55))}.legend{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px}.legend div{border:1px solid var(--line);background:#0a1725;border-radius:14px;padding:10px}.schema-tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}.schema-tabs button{border:1px solid var(--line);background:#0b1928;color:#d8eaff;border-radius:999px;padding:8px 11px;cursor:pointer;font-weight:850}.schema-tabs button.active{background:var(--cyan);color:#031019}.schema-panel{display:none}.schema-panel.active{display:block}.ctrl{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px;background:rgba(5,11,18,.9);border-top:1px solid var(--line)}.slide-count{color:var(--muted);font-weight:850}.log-entry{border-left:4px solid var(--line);padding:10px 0 10px 14px}.log-entry.latest{border-left-color:var(--cyan);background:rgba(77,215,255,.04)}.only-print{display:none}
+  @media(max-width:900px){.grid2,.grid3,.pipeline,.legend{grid-template-columns:1fr}.slide{padding:18px}.topbar nav{display:none}.slide-inner{padding:24px}.ctrl{position:sticky;bottom:0}.slide{min-height:auto}}
+  @media print{body{background:#050b12}.topbar,.ctrl,.progress{display:none}.slide{display:grid!important;min-height:auto;page-break-after:always}.slide-inner{box-shadow:none}.only-print{display:block}}
 </style>
 </head>
 <body>
-<div class="wrap">
-<header class="page-header" id="header">
-  <div class="eyebrow">StormDeck rolling spec · living artifact</div>
-  <h1>Minimum credible storm-volume viewer first.</h1>
-  <p class="purpose">This artifact is the source-of-truth rolling spec for StormDeck’s near-term build: start with a synthetic 3D reflectivity MWE in a game engine, preserve the data contract needed for archived radar, then graduate to ATD/NEXRAD ingest and eventually live PAR.</p>
-  <div class="meta">
-    <span class="badge warn">NEEDS_REVIEW</span>
-    <span class="badge info">Last updated: 2026-05-21 17:06 CDT</span>
-    <span class="badge info">Current gate: MWE engine spike</span>
-    <span class="badge info">Owner: StormDeck team</span>
-    <span class="badge pass">Target workstation: RTX 4090 / 128 GB RAM</span>
-  </div>
+<div class="deck-shell">
+<header class="topbar" id="header">
+  <div class="brand">StormDeck</div>
+  <nav id="slide-nav" aria-label="Slide navigation"></nav>
+  <span class="badge warn">NEEDS_REVIEW</span>
+  <span class="badge pass">M0 SPEC DECK</span>
+  <span class="badge info">Updated 2026-05-21 17:16 CDT</span>
 </header>
-
-<section class="card" id="pipeline" aria-label="Pipeline progress">
-  <h2>Where we are</h2>
-  <div class="pipeline">
-    <div class="pipeline-stage done"><strong>0. Concept framing</strong><small>PAR + game-engine storm cockpit thesis, ATD/NEXRAD path, replay before live.</small></div>
-    <div class="pipeline-stage current"><strong>1. Synthetic MWE</strong><small>Render fake-but-structured 3D reflectivity; prove engine, UX, and data contract.</small></div>
-    <div class="pipeline-stage pending"><strong>2. Archived radar</strong><small>Parse/gridding path for CfRadial/NEXRAD; preserve observed vs interpolated truth labels.</small></div>
-    <div class="pipeline-stage pending"><strong>3. Storm objects</strong><small>Manual semantic object, 60-second delta panel, warning/impact corridor.</small></div>
-    <div class="pipeline-stage pending"><strong>4. Live pipeline</strong><small>Live NEXRAD/PAR ingest, latency budget, storm-state server, future adaptive tasking.</small></div>
-  </div>
-</section>
+<div class="progress"><span id="progress-bar"></span></div>
 
 <main id="body">
-<section class="card" id="bottleneck">
-  <h2>Biggest current bottleneck</h2>
-  <div class="callout fail"><strong>Bottleneck:</strong> no executable renderer/data-contract MWE exists yet. Until a game engine can consume a simple time-indexed 3D reflectivity volume and expose slices/timeline/metadata, real radar ingest work risks optimizing for the wrong representation.</div>
-  <div class="two-col">
-    <div class="col-card bad"><h3>Do not do next</h3><p>Do not start by parsing every radar format, implementing live PAR streaming, or making cinematic weather effects. That path maximizes complexity before proving the front-end contract. Very artistic. Also operationally useless.</p></div>
-    <div class="col-card good"><h3>Do next</h3><p>Build a hard-coded game-engine desktop app that renders synthetic reflectivity frames from a stable JSON + binary/texture schema, with timeline scrub, slices, color map, storm motion arrow, and timestamp/source labels.</p></div>
-  </div>
-</section>
+<section class="slide active" data-title="Title"><div class="slide-inner"><div class="kicker">Rolling spec · high-signal deck</div><h1>Build the credible storm-volume viewer first.</h1><p class="lead">StormDeck starts with a synthetic, game-engine MWE that proves rendering, interaction, and the data contract before archived radar ingest and live PAR streaming.</p><div class="grid3"><div class="card good"><h3>Current gate</h3><p>Synthetic MWE engine spike</p></div><div class="card warn"><h3>Biggest bottleneck</h3><p>No executable renderer/data-contract proof yet.</p></div><div class="card"><h3>Key recall file</h3><p><code>docs/bryan-inputs.md</code></p></div></div></div></section>
 
-<section class="card" id="product-vision">
-  <h2>Product vision</h2>
-  <p>StormDeck is a game-engine-powered 4D severe-weather cockpit that converts radar volumes and radar-derived objects into an interactive, geospatially aligned storm workspace. The product should help forecasters, researchers, trainers, and emergency managers answer: what changed, where, why it matters, who is affected, and what should happen next.</p>
-  <div class="callout"><strong>v0 vision:</strong> a desktop app renders a time-scrubbable synthetic supercell-like reflectivity volume with horizontal/vertical slicing, storm motion context, source/timestamp metadata, and a data interface that can later accept archived radar.</div>
-</section>
+<section class="slide" data-title="Thesis"><div class="slide-inner"><div class="kicker">Product thesis</div><h2>Operational clarity over weather theater.</h2><div class="grid2"><div><p class="lead">PAR turns radar from a slow rotating dish into a fast atmospheric sensor. A game engine should turn rapid volumes into an interactive storm world that is time-scrubbable, geospatially aligned, object-aware, and honest about uncertainty.</p></div><div class="cards"><div class="card"><h3>Answer faster</h3><p>What changed, where, why it matters, who is affected, what next?</p></div><div class="card"><h3>Never hide provenance</h3><p>Every view shows timestamp, source, field, units, scan age, confidence, and uncertainty.</p></div></div></div></div></section>
 
-<section class="card" id="tech-stack">
-  <h2>Recommended tech stack</h2>
-  <table>
-    <thead><tr><th>Layer</th><th>Default choice</th><th>Rationale</th></tr></thead>
-    <tbody>
-      <tr><td>Engine</td><td>Unreal Engine 5 for high-end MWE; keep Unity/WebGPU alternatives documented.</td><td>Best path for workstation-grade rendering, future cockpit UI, VR/video-wall options, and GPU volume rendering headroom.</td></tr>
-      <tr><td>Synthetic generator</td><td>Python + NumPy producing metadata JSON and raw/PNG/EXR texture frames.</td><td>Fast to iterate; mirrors later preprocessing pipeline; avoids engine-only data lock-in.</td></tr>
-      <tr><td>MWE data format</td><td>Metadata JSON + 3D texture payload; start with uint8 dBZ index or float16.</td><td>Small, GPU-friendly, easy to replace with real gridded radar cache.</td></tr>
-      <tr><td>Radar ingest later</td><td>Python, Py-ART, xarray/netCDF4, Zarr/chunked binary cache.</td><td>Matches ATD CfRadial/NEXRAD workflows and keeps scientific parsing outside the renderer.</td></tr>
-      <tr><td>Repo artifact</td><td><code>docs/rolling-spec.html</code> plus README/index link.</td><td>Single self-contained living spec; human-scannable; patchable by agents after each change.</td></tr>
-    </tbody>
-  </table>
-</section>
+<section class="slide" data-title="Bryan"><div class="slide-inner"><div class="kicker">Bryan’s direction</div><h2>MWE first. Real data later. Live PAR last.</h2><div class="callout"><strong>Direct guidance:</strong> build an app using a game engine to render a 3D display of simulated reflectivity data, hard-coding as many parameters as necessary.</div><div class="pipeline" id="pipeline"><div class="pipeline-stage done"><strong>0. Concept</strong><small>PAR + game-engine storm cockpit.</small></div><div class="pipeline-stage current"><strong>1. Synthetic MWE</strong><small>Prove volume rendering, UX, data contract.</small></div><div class="pipeline-stage pending"><strong>2. Archived data</strong><small>Feed realistic ATD/NEXRAD cases.</small></div><div class="pipeline-stage pending"><strong>3. Storm objects</strong><small>Deltas, warnings, impact corridor.</small></div><div class="pipeline-stage pending"><strong>4. Live PAR</strong><small>Operational stream after replay works.</small></div></div></div></section>
 
-<section class="card" id="mvp-architecture">
-  <h2>MVP architecture</h2>
-  <div class="three-col">
-    <div class="col-card"><h3>1. Synthetic volume generator</h3><p>Creates 30–120 time frames of plausible dBZ values: storm core, anvil/precip shield, optional hook-ish appendage, and motion/intensification trend.</p></div>
-    <div class="col-card"><h3>2. Render cache</h3><p>Stores compact 3D texture frames with metadata: grid size, spacing, origin, field, units, timestamp, source, and observed/synthetic flag.</p></div>
-    <div class="col-card"><h3>3. Game-engine client</h3><p>Loads frames, renders volume/slices, provides timeline scrubber, metadata HUD, storm motion arrow, and export screenshot/video function.</p></div>
-  </div>
-  <details open><summary>MWE acceptance criteria</summary><div class="checklist" id="acceptance-checklist">
-    <label><input type="checkbox" /> Loads at least 30 synthetic frames without network access.</label>
-    <label><input type="checkbox" /> Renders reflectivity as a 3D volume or stacked slices using a labeled dBZ color map.</label>
-    <label><input type="checkbox" /> Provides horizontal slice and user-positioned vertical cross-section.</label>
-    <label><input type="checkbox" /> Shows timestamp, source=<code>synthetic_demo_v0</code>, frame index, scan age analogue, grid dimensions, and units.</label>
-    <label><input type="checkbox" /> Provides a basic “what changed in last 60 seconds” panel from synthetic frame deltas.</label>
-    <label><input type="checkbox" /> Exports a screenshot with metadata watermark.</label>
-  </div></details>
-</section>
+<section class="slide" data-title="Bottleneck"><div class="slide-inner" id="bottleneck"><div class="kicker">Current bottleneck</div><h2>No executable renderer/data-contract proof exists yet.</h2><div class="grid2"><div class="card bad"><h3>Not next</h3><p>Do not begin with radar-format sprawl, live streaming, or cinematic effects. That would be a beautiful way to avoid validating the hard part.</p></div><div class="card good"><h3>Next</h3><p>Generate 30 synthetic <code>256×256×64</code> reflectivity frames with JSON metadata and load one into the selected engine.</p></div></div></div></section>
 
-<section class="card" id="topographic-data-path">
-  <h2>Topographic view of the data path</h2>
-  <p class="muted">This view treats the system like terrain: raw/authoritative data starts at the high ground on the left, then descends through preprocessing, cache, rendering, and operator decisions. The rule is simple: every downhill step must preserve provenance, uncertainty, and whether the pixels are synthetic, observed, interpolated, or derived.</p>
-  <div class="topo-wrap" role="img" aria-label="Topographic data path from radar source through preprocessing, render cache, game engine, operator view, and exported decision artifacts">
-    <svg class="topo-svg" viewBox="0 0 960 430" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <linearGradient id="sky" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#0d2133"/><stop offset="1" stop-color="#06101a"/></linearGradient>
-        <linearGradient id="terrain" x1="0" x2="1"><stop offset="0" stop-color="#183d32"/><stop offset=".45" stop-color="#22402c"/><stop offset="1" stop-color="#3a2e1c"/></linearGradient>
-        <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#4dd7ff"/></marker>
-        <filter id="soft"><feGaussianBlur stdDeviation="7"/></filter>
-      </defs>
-      <rect width="960" height="430" fill="url(#sky)"/>
-      <path d="M0 315 C110 250 174 274 252 222 C345 160 440 184 520 145 C650 80 768 117 960 65 L960 430 L0 430 Z" fill="url(#terrain)" opacity=".88"/>
-      <path d="M0 315 C110 250 174 274 252 222 C345 160 440 184 520 145 C650 80 768 117 960 65" fill="none" stroke="#65f0a4" stroke-width="3" opacity=".75"/>
-      <path d="M10 348 C150 300 230 306 330 260 C470 198 590 198 720 154 C830 117 890 110 950 102" fill="none" stroke="#91a9c3" stroke-width="1" opacity=".35"/>
-      <path d="M18 378 C160 348 250 344 370 310 C510 270 650 256 782 220 C852 202 905 196 950 188" fill="none" stroke="#91a9c3" stroke-width="1" opacity=".22"/>
-      <path d="M110 96 C185 102 226 139 300 145 C392 153 448 111 528 122 C630 136 676 191 762 197 C828 202 868 177 920 166" fill="none" stroke="#4dd7ff" stroke-width="4" marker-end="url(#arrow)" opacity=".95"/>
-      <path d="M150 124 C205 151 225 195 272 222" fill="none" stroke="#ffd166" stroke-dasharray="6 6" stroke-width="3" marker-end="url(#arrow)" opacity=".9"/>
-      <path d="M576 146 C620 174 647 210 682 246" fill="none" stroke="#ffd166" stroke-dasharray="6 6" stroke-width="3" marker-end="url(#arrow)" opacity=".9"/>
+<section class="slide" data-title="MWE"><div class="slide-inner"><div class="kicker">MWE acceptance target</div><h2>One app. One fake storm. Clear truth labels.</h2><table><thead><tr><th>Capability</th><th>Definition of done</th></tr></thead><tbody><tr><td>Volume render</td><td>Reflectivity appears as a labeled 3D volume or stacked slices with dBZ color map.</td></tr><tr><td>Timeline</td><td>30–60 frames scrub smoothly on RTX 4090 target.</td></tr><tr><td>Slicing</td><td>Horizontal altitude slice and user-positioned vertical cross-section.</td></tr><tr><td>Metadata HUD</td><td>Always shows source=<code>synthetic_demo_v0</code>, timestamp, grid, units, truth status.</td></tr><tr><td>Change panel</td><td>Reports a simple 60-second synthetic delta.</td></tr><tr><td>Export</td><td>Screenshot/video includes metadata watermark.</td></tr></tbody></table></div></section>
 
-      <g class="topo-node"><title>1. Source volume: synthetic now; ATD/NEXRAD moments later. Highest-trust source data stays immutable.</title><rect x="42" y="56" width="160" height="78" rx="14" fill="#102033" stroke="#65f0a4" stroke-width="2"/><text x="122" y="86" text-anchor="middle" fill="#eaf4ff" font-size="15" font-weight="800">Source volume</text><text x="122" y="110" text-anchor="middle" fill="#91a9c3" font-size="12">synthetic → ATD/NEXRAD</text></g>
-      <g class="topo-node"><title>2. Truth metadata: timestamp, grid/sweep geometry, source, units, QC/provenance, observed/synthetic status.</title><rect x="260" y="105" width="158" height="78" rx="14" fill="#102033" stroke="#4dd7ff" stroke-width="2"/><text x="339" y="136" text-anchor="middle" fill="#eaf4ff" font-size="15" font-weight="800">Truth metadata</text><text x="339" y="160" text-anchor="middle" fill="#91a9c3" font-size="12">time · units · provenance</text></g>
-      <g class="topo-node"><title>3. Preprocess/cache: generated or parsed data becomes GPU-friendly 3D textures while preserving the original source contract.</title><rect x="482" y="82" width="166" height="84" rx="14" fill="#102033" stroke="#b99cff" stroke-width="2"/><text x="565" y="114" text-anchor="middle" fill="#eaf4ff" font-size="15" font-weight="800">Preprocess/cache</text><text x="565" y="138" text-anchor="middle" fill="#91a9c3" font-size="12">3D texture frames</text></g>
-      <g class="topo-node"><title>4. Game-engine renderer: volume/slice shaders render reflectivity while keeping metadata and truth labels visible.</title><rect x="705" y="151" width="166" height="84" rx="14" fill="#102033" stroke="#ff9f5a" stroke-width="2"/><text x="788" y="183" text-anchor="middle" fill="#eaf4ff" font-size="15" font-weight="800">Engine renderer</text><text x="788" y="207" text-anchor="middle" fill="#91a9c3" font-size="12">volume · slices · HUD</text></g>
-      <g class="topo-node"><title>5. Operator decision layer: what changed, storm object, warning corridor, screenshot/video export. This is derived decision support, not raw radar.</title><rect x="640" y="274" width="212" height="78" rx="14" fill="#102033" stroke="#ffd166" stroke-width="2"/><text x="746" y="304" text-anchor="middle" fill="#eaf4ff" font-size="15" font-weight="800">Decision overlays</text><text x="746" y="328" text-anchor="middle" fill="#91a9c3" font-size="12">deltas · objects · warnings · export</text></g>
+<section class="slide" data-title="Stack"><div class="slide-inner"><div class="kicker">Recommended stack</div><h2>Unreal front end, Python data generator, engine-neutral contract.</h2><div class="grid3"><div class="card"><h3>Engine</h3><p>Unreal Engine 5 preferred for high-end workstation rendering, cockpit UI, and future VR/video wall. Unity remains acceptable if team velocity wins.</p></div><div class="card"><h3>Generator</h3><p>Python + NumPy produce synthetic fields, metadata JSON, and GPU-friendly payloads.</p></div><div class="card"><h3>Cache</h3><p>Start with uint8 dBZ index or float16 3D texture payload; later map CfRadial/NEXRAD into same contract.</p></div></div></div></section>
 
-      <text x="52" y="374" fill="#91a9c3" font-size="12">High-trust source ridge</text>
-      <text x="724" y="386" fill="#91a9c3" font-size="12">Lower terrain = derived/operator-facing products</text>
-      <text x="742" y="74" fill="#4dd7ff" font-size="13" font-weight="800">blue path: data contract</text>
-      <text x="48" y="176" fill="#ffd166" font-size="13" font-weight="800">dashed path: derived views</text>
-    </svg>
-  </div>
-  <div class="topo-legend">
-    <div class="legend-chip"><b>High ground</b><span class="terrain-note">Source volume is immutable. Synthetic now; observed radar later.</span></div>
-    <div class="legend-chip"><b>Contour lines</b><span class="terrain-note">Each descent adds processing and potential interpretation risk.</span></div>
-    <div class="legend-chip"><b>Blue flow</b><span class="terrain-note">Engine contract: metadata + texture payload + truth status.</span></div>
-    <div class="legend-chip"><b>Gold flow</b><span class="terrain-note">Derived products: slices, deltas, objects, warning/export layers.</span></div>
-  </div>
-</section>
+<section class="slide" data-title="Topo"><div class="slide-inner"><div class="kicker">Data path as terrain</div><h2>Every downhill step adds interpretation risk.</h2><div class="topo-wrap" role="img" aria-label="Topographic data path from source volume through metadata, preprocessing, engine renderer, and decision overlays"><svg class="topo-svg" viewBox="0 0 960 430" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="sky" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#0d2133"/><stop offset="1" stop-color="#06101a"/></linearGradient><linearGradient id="terrain" x1="0" x2="1"><stop offset="0" stop-color="#183d32"/><stop offset=".45" stop-color="#22402c"/><stop offset="1" stop-color="#3a2e1c"/></linearGradient><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#4dd7ff"/></marker></defs><rect width="960" height="430" fill="url(#sky)"/><path d="M0 315 C110 250 174 274 252 222 C345 160 440 184 520 145 C650 80 768 117 960 65 L960 430 L0 430 Z" fill="url(#terrain)" opacity=".88"/><path d="M0 315 C110 250 174 274 252 222 C345 160 440 184 520 145 C650 80 768 117 960 65" fill="none" stroke="#65f0a4" stroke-width="3" opacity=".75"/><path d="M10 348 C150 300 230 306 330 260 C470 198 590 198 720 154 C830 117 890 110 950 102" fill="none" stroke="#91a9c3" stroke-width="1" opacity=".35"/><path d="M18 378 C160 348 250 344 370 310 C510 270 650 256 782 220 C852 202 905 196 950 188" fill="none" stroke="#91a9c3" stroke-width="1" opacity=".22"/><path d="M110 96 C185 102 226 139 300 145 C392 153 448 111 528 122 C630 136 676 191 762 197 C828 202 868 177 920 166" fill="none" stroke="#4dd7ff" stroke-width="4" marker-end="url(#arrow)"/><path d="M150 124 C205 151 225 195 272 222" fill="none" stroke="#ffd166" stroke-dasharray="6 6" stroke-width="3" marker-end="url(#arrow)"/><path d="M576 146 C620 174 647 210 682 246" fill="none" stroke="#ffd166" stroke-dasharray="6 6" stroke-width="3" marker-end="url(#arrow)"/><g class="topo-node"><title>Highest-trust source data stays immutable.</title><rect x="42" y="56" width="160" height="78" rx="14" fill="#102033" stroke="#65f0a4" stroke-width="2"/><text x="122" y="86" text-anchor="middle" fill="#eaf4ff" font-size="15" font-weight="800">Source volume</text><text x="122" y="110" text-anchor="middle" fill="#91a9c3" font-size="12">synthetic → ATD/NEXRAD</text></g><g class="topo-node"><title>Time, grid/sweep geometry, source, units, QC, provenance.</title><rect x="260" y="105" width="158" height="78" rx="14" fill="#102033" stroke="#4dd7ff" stroke-width="2"/><text x="339" y="136" text-anchor="middle" fill="#eaf4ff" font-size="15" font-weight="800">Truth metadata</text><text x="339" y="160" text-anchor="middle" fill="#91a9c3" font-size="12">time · units · provenance</text></g><g class="topo-node"><title>GPU-friendly 3D textures while preserving original source contract.</title><rect x="482" y="82" width="166" height="84" rx="14" fill="#102033" stroke="#b99cff" stroke-width="2"/><text x="565" y="114" text-anchor="middle" fill="#eaf4ff" font-size="15" font-weight="800">Preprocess/cache</text><text x="565" y="138" text-anchor="middle" fill="#91a9c3" font-size="12">3D texture frames</text></g><g class="topo-node"><title>Render volume/slices while keeping metadata visible.</title><rect x="705" y="151" width="166" height="84" rx="14" fill="#102033" stroke="#ff9f5a" stroke-width="2"/><text x="788" y="183" text-anchor="middle" fill="#eaf4ff" font-size="15" font-weight="800">Engine renderer</text><text x="788" y="207" text-anchor="middle" fill="#91a9c3" font-size="12">volume · slices · HUD</text></g><g class="topo-node"><title>Derived decision support, not raw radar.</title><rect x="640" y="274" width="212" height="78" rx="14" fill="#102033" stroke="#ffd166" stroke-width="2"/><text x="746" y="304" text-anchor="middle" fill="#eaf4ff" font-size="15" font-weight="800">Decision overlays</text><text x="746" y="328" text-anchor="middle" fill="#91a9c3" font-size="12">deltas · objects · warnings · export</text></g></svg></div><div class="legend"><div><b>High ground</b><br><span class="muted">Immutable source.</span></div><div><b>Contours</b><br><span class="muted">Processing risk.</span></div><div><b>Blue</b><br><span class="muted">Data contract.</span></div><div><b>Gold</b><br><span class="muted">Derived views.</span></div></div></div></section>
 
-<section class="card" id="dream-architecture">
-  <h2>Dream architecture</h2>
-  <p>Live PAR/NEXRAD ingest flows through radar-edge preprocessing/QC, a central storm-state server, semantic object tracking, and multi-user game-engine clients. Emergency managers get simplified impact views; trainers get replay/scenario controls; researchers get full field/QC/sweep metadata. Future adaptive PAR tasking remains possible through a request layer, but not required for v1.</p>
-</section>
+<section class="slide" data-title="Hardware"><div class="slide-inner"><div class="kicker">Hardware target</div><h2>RTX 4090 + 128 GB RAM is not the blocker.</h2><div class="grid2"><div><div class="big">0.94 GB</div><p class="lead">Approx. raw storage for <code>256×256×64</code>, 2 fields, 60 frames, float16.</p></div><div class="cards"><div class="card good"><h3>4090 target</h3><p>Excellent high-end MWE/demo workstation.</p></div><div class="card warn"><h3>Real risk</h3><p>Pipeline/schema/rendering implementation, not VRAM/RAM for the first prototype.</p></div></div></div></div></section>
 
-<section class="card" id="hardware-pipeline">
-  <h2>Radar-side and render-side hardware pipeline</h2>
-  <table>
-    <thead><tr><th>Area</th><th>MWE</th><th>Archived prototype</th><th>Live/dream path</th></tr></thead>
-    <tbody>
-      <tr><td>Radar data level</td><td>Synthetic gridded reflectivity.</td><td>CfRadial/NEXRAD moments converted to render cache.</td><td>Moments and derived products from radar edge; raw I/Q only for specialized research.</td></tr>
-      <tr><td>Preprocessing</td><td>Python generator only.</td><td>Parser, QC flags, gridding, observed mask, provenance.</td><td>Edge QC/dealiasing, central storm-state aggregation, stream serialization.</td></tr>
-      <tr><td>Client GPU</td><td>RTX 4090 easily supports 256×256×64 × 60+ frames.</td><td>4090 remains a strong target for multiple fields and cached replay.</td><td>LOD, bricking, streaming, cloud/thin-client option for lower-end users.</td></tr>
-      <tr><td>System RAM</td><td>128 GB is ample.</td><td>Useful for local archives, preprocessing, and multi-case caches.</td><td>Server-side memory scales with stream count and retained time history.</td></tr>
-    </tbody>
-  </table>
-</section>
+<section class="slide" data-title="Schemas"><div class="slide-inner"><div class="kicker">Data contract</div><h2>Small schemas keep the renderer honest.</h2><div class="schema-tabs"><button class="active" data-schema="s1">VolumeFrame</button><button data-schema="s2">Texture</button><button data-schema="s3">Object</button><button data-schema="s4">Event</button></div><div id="s1" class="schema-panel active"><pre>{"frame_id":"synthetic_00042","timestamp_utc":"2026-05-21T20:15:00Z","source":"synthetic_demo_v0","field":"reflectivity","units":"dBZ","truth_status":"synthetic","grid":{"type":"cartesian","nx":256,"ny":256,"nz":64,"dx_m":500,"dy_m":500,"dz_m":250},"payload_ref":"frames/reflectivity_00042.u8"}</pre></div><div id="s2" class="schema-panel"><pre>{"texture_id":"refl_tex_00042","encoding":"uint8_dbz_lut","dimensions":[256,256,64],"value_range":[-10,75],"transfer_function":"nws_reflectivity_v0","interpolation":"none_synthetic"}</pre></div><div id="s3" class="schema-panel"><pre>{"object_id":"storm_A","type":"synthetic_supercell","source":"manual_or_synthetic","confidence":1.0,"centroid":{"x_m":18000,"y_m":-12000,"z_m":3500},"motion":{"speed_mps":18,"direction_deg":55}}</pre></div><div id="s4" class="schema-panel"><pre>{"event_id":"delta_00042","timestamp_utc":"2026-05-21T20:15:00Z","lookback_seconds":60,"summary":"+8 dBZ core intensification near storm centroid","linked_frame_ids":["synthetic_00030","synthetic_00042"]}</pre></div></div></section>
 
-<section class="card" id="latency-budget">
-  <h2>Latency budget</h2>
-  <table>
-    <thead><tr><th>Path</th><th>Target</th><th>Notes</th></tr></thead>
-    <tbody>
-      <tr><td>MWE frame load</td><td>&lt; 500 ms initial local load for demo case after assets are built.</td><td>Prebaked assets; no radar ingest latency.</td></tr>
-      <tr><td>Interaction</td><td>60 FPS desktop; &lt;100 ms UI response.</td><td>4090 workstation target.</td></tr>
-      <tr><td>Archived parse/cache later</td><td>Seconds to minutes per case depending on gridding.</td><td>Acceptable offline; cache results.</td></tr>
-      <tr><td>Live/dream</td><td>Goal: radar availability + preprocessing + client update under 5–15 seconds.</td><td>Precise target depends on source cadence and product level.</td></tr>
-    </tbody>
-  </table>
-</section>
+<section class="slide" data-title="Grammar"><div class="slide-inner"><div class="kicker">Visualization grammar</div><h2>Every visual layer declares what it is.</h2><table><thead><tr><th>Layer</th><th>Visual rule</th><th>Truth rule</th></tr></thead><tbody><tr><td>Reflectivity</td><td>Conventional dBZ ramp; avoid over-smoothing.</td><td>Label synthetic/observed/interpolated.</td></tr><tr><td>Velocity</td><td>Diverging inbound/outbound palette.</td><td>Show aliasing/Nyquist context later.</td></tr><tr><td>Rotation</td><td>Outline/halo, not opaque blob.</td><td>Derived confidence object.</td></tr><tr><td>Warning/impact</td><td>Corridors, towns, ETA labels.</td><td>Decision overlay, not radar observation.</td></tr><tr><td>Uncertainty</td><td>Hatching/transparency/badges.</td><td>Visible in screenshots/video.</td></tr></tbody></table></div></section>
 
-<section class="card" id="schemas">
-  <h2>Data schemas</h2>
-  <div class="tabs" role="tablist">
-    <button class="active" data-tab="volume-frame">RadarVolumeFrame</button>
-    <button data-tab="render-field">RenderedFieldTexture</button>
-    <button data-tab="storm-object">SemanticStormObject</button>
-    <button data-tab="warning-corridor">WarningImpactCorridor</button>
-    <button data-tab="timeline-event">TimelineEvent</button>
-    <button data-tab="annotation">Annotation</button>
-  </div>
-  <div id="volume-frame" class="tab-panel active"><pre>{
-  "frame_id": "synthetic_00042",
-  "timestamp_utc": "2026-05-21T20:15:00Z",
-  "source": "synthetic_demo_v0",
-  "field": "reflectivity",
-  "units": "dBZ",
-  "truth_status": "synthetic",
-  "grid": {"type":"cartesian", "nx":256, "ny":256, "nz":64, "dx_m":500, "dy_m":500, "dz_m":250},
-  "origin": {"lat":35.333, "lon":-97.277, "alt_m":370},
-  "payload_ref": "frames/reflectivity_00042.u8"
-}</pre></div>
-  <div id="render-field" class="tab-panel"><pre>{
-  "texture_id": "refl_tex_00042",
-  "encoding": "uint8_dbz_lut",
-  "dimensions": [256, 256, 64],
-  "value_range": [-10, 75],
-  "transfer_function": "nws_reflectivity_v0",
-  "observed_mask_ref": null,
-  "interpolation": "none_synthetic"
-}</pre></div>
-  <div id="storm-object" class="tab-panel"><pre>{
-  "object_id": "storm_A",
-  "type": "synthetic_supercell",
-  "source": "manual_or_synthetic",
-  "confidence": 1.0,
-  "centroid": {"x_m": 18000, "y_m": -12000, "z_m": 3500},
-  "motion": {"speed_mps": 18, "direction_deg": 55},
-  "evidence_frames": ["synthetic_00036", "synthetic_00042"]
-}</pre></div>
-  <div id="warning-corridor" class="tab-panel"><pre>{
-  "corridor_id": "demo_warning_001",
-  "type": "training_warning_corridor",
-  "geometry": {"format":"geojson", "coordinates": []},
-  "valid_time_utc": "2026-05-21T20:15:00Z",
-  "hazards": ["large_hail", "damaging_wind"],
-  "confidence": "demo_only"
-}</pre></div>
-  <div id="timeline-event" class="tab-panel"><pre>{
-  "event_id": "delta_00042",
-  "timestamp_utc": "2026-05-21T20:15:00Z",
-  "lookback_seconds": 60,
-  "summary": "+8 dBZ core intensification near storm centroid",
-  "linked_frame_ids": ["synthetic_00030", "synthetic_00042"]
-}</pre></div>
-  <div id="annotation" class="tab-panel"><pre>{
-  "annotation_id": "note_001",
-  "author": "StormDeck team",
-  "target": "storm_A",
-  "created_utc": "2026-05-21T20:16:00Z",
-  "text": "Demo object for MWE; not meteorological detection.",
-  "visibility": "operator_and_export"
-}</pre></div>
-</section>
+<section class="slide" data-title="Plan"><div class="slide-inner"><div class="kicker">First two weeks</div><h2>Compress uncertainty in the only order that matters.</h2><table><thead><tr><th>Window</th><th>Work</th><th>Exit criterion</th></tr></thead><tbody><tr><td>Days 1–2</td><td>Choose engine, define schema, generate synthetic volume.</td><td>One frame loads.</td></tr><tr><td>Days 3–4</td><td>Reflectivity color map and 3D/stacked rendering.</td><td>Interactive frame render.</td></tr><tr><td>Days 5–8</td><td>Timeline + horizontal/vertical slicing.</td><td>Smooth scrub and slices.</td></tr><tr><td>Days 9–12</td><td>HUD, motion arrow, object, 60-sec delta.</td><td>Self-explanatory demo.</td></tr><tr><td>Days 13–14</td><td>Export screenshot/video and update rolling spec.</td><td>Shareable demo artifact.</td></tr></tbody></table></div></section>
 
-<section class="card" id="visualization-grammar">
-  <h2>Visualization grammar</h2>
-  <table>
-    <thead><tr><th>Layer</th><th>Visual rule</th><th>Truth rule</th></tr></thead>
-    <tbody>
-      <tr><td>Reflectivity</td><td>Conventional dBZ ramp; opacity by intensity/QC; avoid over-smoothing storm structure.</td><td>Label synthetic, observed, interpolated, or derived.</td></tr>
-      <tr><td>Velocity</td><td>Diverging inbound/outbound palette; optional storm-relative mode later.</td><td>Show Nyquist/aliasing context; never imply tornado detection by color alone.</td></tr>
-      <tr><td>Rotation</td><td>Outline/halo on top of velocity, not opaque blob.</td><td>Derived feature with confidence and source fields.</td></tr>
-      <tr><td>Hail</td><td>Probabilistic texture or contour over reflectivity/dual-pol.</td><td>Derived; must show algorithm/proxy and confidence.</td></tr>
-      <tr><td>Debris</td><td>Distinct stipple/contour tied to dual-pol evidence.</td><td>High consequence; label uncertainty aggressively.</td></tr>
-      <tr><td>Warning/impact</td><td>Corridor polygons, towns/assets, ETA labels.</td><td>Decision overlay, not radar observation.</td></tr>
-      <tr><td>Uncertainty</td><td>Hatching, transparency, or confidence badges.</td><td>Uncertainty must be visible in screenshots/video exports.</td></tr>
-    </tbody>
-  </table>
-</section>
+<section class="slide" data-title="Risks"><div class="slide-inner"><div class="kicker">Risks</div><h2>Credibility failures beat performance failures.</h2><table><thead><tr><th>Risk</th><th>Severity</th><th>Mitigation</th></tr></thead><tbody><tr><td>Renderer contract wrong</td><td><span class="badge fail">HIGH</span></td><td>Synthetic MWE first; engine-neutral schema.</td></tr><tr><td>Pretty 3D misleads</td><td><span class="badge fail">HIGH</span></td><td>Always label source/truth/uncertainty.</td></tr><tr><td>Performance cliff</td><td><span class="badge warn">MED</span></td><td>Start 256×256×64; profile before scaling.</td></tr><tr><td>Radar ingest complexity</td><td><span class="badge warn">MED</span></td><td>Defer until renderer contract exists.</td></tr><tr><td>Live PAR unavailable</td><td><span class="badge info">LOW v0</span></td><td>Replay/synthetic path does not require live access.</td></tr></tbody></table></div></section>
 
-<section class="card" id="ux-navigation">
-  <h2>UX/navigation model</h2>
-  <table>
-    <thead><tr><th>Control</th><th>MWE behavior</th><th>Operational reason</th></tr></thead>
-    <tbody>
-      <tr><td>Orbit/pan/zoom</td><td>Inspect synthetic storm volume from any angle.</td><td>Spatial comprehension without implying the 3D view is automatically superior.</td></tr>
-      <tr><td>Timeline scrubber</td><td>Move through frames; show current and lookback time.</td><td>PAR value is evolution speed; the UI must make change obvious.</td></tr>
-      <tr><td>Horizontal slice</td><td>Altitude slider clips/planes through volume.</td><td>Forecasters need familiar plan-view reasoning.</td></tr>
-      <tr><td>Vertical slice</td><td>User drags cross-section line; view side profile.</td><td>Reveals storm depth/tilt without visual guesswork.</td></tr>
-      <tr><td>What changed panel</td><td>Lists top synthetic deltas over 60 seconds.</td><td>Reduces cognitive load under warning pressure.</td></tr>
-      <tr><td>Metadata HUD</td><td>Always show source, time, units, grid, status.</td><td>Trust requires provenance in the operator’s visual field.</td></tr>
-    </tbody>
-  </table>
-</section>
+<section class="slide" data-title="Next"><div class="slide-inner" id="next-action"><div class="kicker">Single next action</div><h2>Generate 30 synthetic frames and load one into the engine.</h2><div class="callout warn"><strong>Next action:</strong> build the first synthetic data generator and engine-loading contract: 30 frames of <code>256×256×64</code> reflectivity, metadata JSON, and one successful engine load/render using the topographic data-path as the implementation map.</div><div class="grid2"><div class="card"><h3>Bryan recall</h3><p>New inputs go to <code>docs/bryan-inputs.md</code> so decisions remain searchable and not trapped in chat archaeology. Humane. Disturbingly rare.</p></div><div class="card"><h3>Update protocol</h3><p>After each meaningful change: update this deck, bottleneck, next action, and iteration log.</p></div></div></div></section>
 
-<section class="card" id="two-week-plan">
-  <h2>First 2-week feasibility plan</h2>
-  <table>
-    <thead><tr><th>Window</th><th>Work</th><th>Exit criterion</th></tr></thead>
-    <tbody>
-      <tr><td>Days 1–2</td><td>Choose engine path; create repo structure; define JSON + payload schema; generate first synthetic volume.</td><td>One frame loads into engine or standalone renderer.</td></tr>
-      <tr><td>Days 3–4</td><td>Implement reflectivity color map and 3D/stacked-slice rendering.</td><td>256×256×64 synthetic frame renders interactively.</td></tr>
-      <tr><td>Days 5–6</td><td>Add timeline and 30–60 generated frames.</td><td>Scrubbing works with stable FPS on 4090 target.</td></tr>
-      <tr><td>Days 7–8</td><td>Add horizontal and vertical slicing.</td><td>Both slice modes update interactively and show position labels.</td></tr>
-      <tr><td>Days 9–10</td><td>Add metadata HUD, storm motion arrow, and basic map/ground plane.</td><td>Screenshot is self-explanatory without verbal narration.</td></tr>
-      <tr><td>Days 11–12</td><td>Add semantic demo storm object and 60-second delta panel.</td><td>Selectable object and “what changed” summary work.</td></tr>
-      <tr><td>Days 13–14</td><td>Export screenshot/video; update this rolling spec with results and new bottleneck.</td><td>Demo artifact can be shared from repo.</td></tr>
-    </tbody>
-  </table>
-</section>
-
-<section class="card" id="milestones">
-  <h2>Prototype milestones</h2>
-  <table>
-    <thead><tr><th>Milestone</th><th>Status</th><th>Definition of done</th></tr></thead>
-    <tbody>
-      <tr><td>M0 Rolling spec in repo</td><td><span class="badge pass">PASS</span></td><td>Self-contained HTML artifact with bottleneck, next step, schemas, and log.</td></tr>
-      <tr><td>M1 Synthetic generator</td><td><span class="badge info">PENDING</span></td><td>Produces deterministic frame sequence and metadata.</td></tr>
-      <tr><td>M2 Engine volume viewer</td><td><span class="badge info">PENDING</span></td><td>Loads and renders synthetic reflectivity at target FPS.</td></tr>
-      <tr><td>M3 Slices + timeline</td><td><span class="badge info">PENDING</span></td><td>Time scrubber, horizontal slice, vertical slice.</td></tr>
-      <tr><td>M4 Semantic object + deltas</td><td><span class="badge info">PENDING</span></td><td>Selectable object and 60-second change panel.</td></tr>
-      <tr><td>M5 Archived radar bridge</td><td><span class="badge info">PENDING</span></td><td>One real archived case converted to same render contract.</td></tr>
-    </tbody>
-  </table>
-</section>
-
-<section class="card" id="risk-register">
-  <h2>Risk register</h2>
-  <table>
-    <thead><tr><th>Risk</th><th>Severity</th><th>Mitigation</th></tr></thead>
-    <tbody>
-      <tr><td>Renderer contract wrong</td><td><span class="badge fail">HIGH</span></td><td>Build synthetic MWE first; keep schema engine-neutral; update spec after each implementation change.</td></tr>
-      <tr><td>Pretty 3D misleads operators</td><td><span class="badge fail">HIGH</span></td><td>Always label source, timestamp, units, synthetic/observed/interpolated/derived status.</td></tr>
-      <tr><td>Volume rendering performance cliff</td><td><span class="badge warn">MED</span></td><td>Start with 256×256×64 and 4090 target; profile before increasing resolution.</td></tr>
-      <tr><td>Archived radar ingest complexity</td><td><span class="badge warn">MED</span></td><td>Defer until renderer contract exists; use Python/Py-ART/xarray path.</td></tr>
-      <tr><td>Live PAR access unavailable</td><td><span class="badge info">LOW v0</span></td><td>Replay mode and synthetic MWE do not require live access.</td></tr>
-    </tbody>
-  </table>
-</section>
-
-<section class="card" id="open-questions">
-  <h2>Open questions requiring external answers</h2>
-  <table>
-    <thead><tr><th>Question</th><th>Why it matters</th><th>When needed</th></tr></thead>
-    <tbody>
-      <tr><td>Unreal vs Unity for first executable?</td><td>Determines initial project template, shader/volume path, and team skill requirements.</td><td>Before M1/M2 implementation.</td></tr>
-      <tr><td>What exact demo machine specs beyond 4090/128 GB?</td><td>CPU/storage/OS affect engine build and large-file cache choices.</td><td>Before performance claims.</td></tr>
-      <tr><td>Which archived case will be first real-data bridge?</td><td>Needed after synthetic MWE to validate the contract.</td><td>After M3.</td></tr>
-      <tr><td>Who is primary first reviewer: forecaster, researcher, or emergency manager?</td><td>Changes UI emphasis and acceptance criteria.</td><td>Before M4 UX polish.</td></tr>
-    </tbody>
-  </table>
-</section>
+<section class="slide" data-title="Log"><div class="slide-inner" id="iteration-log"><div class="kicker">Iteration log</div><h2>Latest changes</h2><div class="cards"><div class="log-entry latest"><strong>2026-05-21 17:16 CDT — Slide deck reformat + Bryan recall file</strong><br><span class="muted">Reformatted rolling spec into a high-signal interactive slide deck and created <code>docs/bryan-inputs.md</code> for durable recall of Bryan-provided information.</span></div><div class="log-entry"><strong>2026-05-21 17:06 CDT — Topographic data path added</strong><br><span class="muted">Added terrain-style data path emphasizing provenance and uncertainty downhill from source data.</span></div><div class="log-entry"><strong>2026-05-21 15:46 CDT — Rolling spec created</strong><br><span class="muted">Shifted near-term plan from archived ATD-first implementation to synthetic game-engine MWE first.</span></div></div></div></section>
 </main>
 
-<section class="card next-action" id="next-action">
-  <h2>Next action</h2>
-  <p><strong>Build the first synthetic data generator and engine-loading contract:</strong> produce 30 frames of <code>256×256×64</code> reflectivity with metadata JSON, then load one frame into the chosen engine using the topographic data-path as the implementation map.</p>
-</section>
-
-<section class="card" id="iteration-log">
-  <h2>Iteration log</h2>
-  <div class="log-entry latest">
-    <div class="log-date">2026-05-21 17:06 CDT</div>
-    <div class="log-title">Topographic data-path view added</div>
-    <div class="log-body">Added an interactive SVG terrain-style system map showing source volume, truth metadata, preprocess/cache, engine renderer, and decision overlays. The view emphasizes that derived/operator-facing products sit downhill from source data and must preserve provenance and uncertainty.</div>
-  </div>
-  <div class="log-entry">
-    <div class="log-date">2026-05-21 15:46 CDT</div>
-    <div class="log-title">Rolling spec created</div>
-    <div class="log-body">Shifted near-term plan from archived ATD-first implementation to synthetic game-engine MWE first. Current bottleneck is now executable renderer/data-contract proof. Next action is to generate 30 synthetic reflectivity frames and load one into the engine.</div>
-  </div>
-</section>
-
-<div class="footer">Update protocol: after every meaningful StormDeck change, edit this file in place, update the header timestamp/status, revise the bottleneck and single next action, move pipeline state if needed, and append a latest iteration-log entry without deleting older entries.</div>
+<footer class="ctrl"><button id="prev">← Prev</button><span class="slide-count" id="slide-count">1 / 12</span><button id="next">Next →</button></footer>
 </div>
 <script>
-  document.querySelectorAll('.tabs button').forEach(btn=>{
-    btn.addEventListener('click',()=>{
-      const parent=btn.closest('.card');
-      parent.querySelectorAll('.tabs button').forEach(b=>b.classList.remove('active'));
-      parent.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
-      btn.classList.add('active');
-      parent.querySelector('#'+btn.dataset.tab).classList.add('active');
-    });
-  });
-  const boxes=[...document.querySelectorAll('#acceptance-checklist input')];
-  const saved=JSON.parse(localStorage.getItem('stormdeck-rolling-spec-checks')||'[]');
-  boxes.forEach((b,i)=>{b.checked=!!saved[i]; b.addEventListener('change',()=>localStorage.setItem('stormdeck-rolling-spec-checks',JSON.stringify(boxes.map(x=>x.checked))))});
+const slides=[...document.querySelectorAll('.slide')];const nav=document.getElementById('slide-nav');const bar=document.getElementById('progress-bar');let idx=0;
+slides.forEach((s,i)=>{const b=document.createElement('button');b.textContent=(i+1)+'. '+s.dataset.title;b.addEventListener('click',()=>show(i));nav.appendChild(b)});
+function show(i){idx=Math.max(0,Math.min(slides.length-1,i));slides.forEach((s,n)=>s.classList.toggle('active',n===idx));[...nav.children].forEach((b,n)=>b.classList.toggle('active',n===idx));bar.style.width=((idx+1)/slides.length*100)+'%';document.getElementById('slide-count').textContent=(idx+1)+' / '+slides.length;location.hash='slide-'+(idx+1)}
+document.getElementById('prev').onclick=()=>show(idx-1);document.getElementById('next').onclick=()=>show(idx+1);document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'||e.key==='PageDown')show(idx+1);if(e.key==='ArrowLeft'||e.key==='PageUp')show(idx-1);});
+document.querySelectorAll('.schema-tabs button').forEach(btn=>btn.addEventListener('click',()=>{document.querySelectorAll('.schema-tabs button').forEach(b=>b.classList.remove('active'));document.querySelectorAll('.schema-panel').forEach(p=>p.classList.remove('active'));btn.classList.add('active');document.getElementById(btn.dataset.schema).classList.add('active')}));
+const m=location.hash.match(/slide-(\d+)/);show(m?Number(m[1])-1:0);
 </script>
 </body>
 </html>
