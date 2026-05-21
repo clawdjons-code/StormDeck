@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>StormDeck Rolling Spec</title>
+<style>
+  :root{
+    --bg:#061019; --panel:#0b1622; --panel2:#101f2f; --ink:#eaf4ff; --muted:#91a9c3; --line:#22394f;
+    --cyan:#4dd7ff; --green:#65f0a4; --amber:#ffd166; --red:#ff5f76; --violet:#b99cff; --orange:#ff9f5a;
+    --shadow:0 18px 60px rgba(0,0,0,.38); --radius:18px;
+  }
+  *{box-sizing:border-box} html{scroll-behavior:smooth} body{margin:0;background:radial-gradient(circle at 12% -8%,rgba(77,215,255,.16),transparent 32%),linear-gradient(180deg,#061019,#08131f 46%,#05090f);color:var(--ink);font:15px/1.55 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+  a{color:var(--cyan)} code,pre{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace} pre{white-space:pre-wrap;background:#04080d;border:1px solid var(--line);border-radius:14px;padding:14px;overflow:auto;color:#dcecff}
+  .wrap{max-width:1000px;margin:0 auto;padding:28px 20px 70px}.page-header{padding:36px 0 20px;border-bottom:1px solid var(--line)}
+  .eyebrow{letter-spacing:.17em;text-transform:uppercase;color:var(--cyan);font-size:12px;font-weight:850}.page-header h1{font-size:clamp(38px,6vw,68px);line-height:.94;margin:12px 0 14px}.purpose{font-size:clamp(17px,2.2vw,22px);color:#c9dcf2;max-width:850px}.meta{display:flex;flex-wrap:wrap;gap:10px;margin:22px 0}.badge{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:7px 11px;border:1px solid var(--line);font-weight:850;font-size:12px;letter-spacing:.02em}.badge.pass{background:rgba(101,240,164,.12);color:#b9ffd4;border-color:rgba(101,240,164,.45)}.badge.fail{background:rgba(255,95,118,.12);color:#ffd3da;border-color:rgba(255,95,118,.45)}.badge.warn{background:rgba(255,209,102,.12);color:#ffe7a8;border-color:rgba(255,209,102,.45)}.badge.info{background:rgba(77,215,255,.12);color:#c4f4ff;border-color:rgba(77,215,255,.45)}
+  .card{background:linear-gradient(180deg,var(--panel),#07111b);border:1px solid var(--line);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow);margin:18px 0}.card h2,.card h3{margin-top:0;line-height:1.15}.muted{color:var(--muted)}
+  .pipeline{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}.pipeline-stage{position:relative;min-height:118px;padding:14px;border:1px solid var(--line);border-radius:15px;background:#0a1420}.pipeline-stage:not(:last-child):after{content:"→";position:absolute;right:-15px;top:42%;color:var(--muted);font-weight:900}.pipeline-stage strong{display:block;margin-bottom:6px}.pipeline-stage.done{border-color:rgba(101,240,164,.5);background:rgba(101,240,164,.07)}.pipeline-stage.current{border-color:rgba(255,209,102,.68);background:rgba(255,209,102,.09);box-shadow:0 0 0 1px rgba(255,209,102,.18) inset}.pipeline-stage.pending{opacity:.82}.pipeline-stage small{color:var(--muted)}
+  .callout{border-left:4px solid var(--cyan);background:rgba(77,215,255,.08);border-radius:13px;padding:15px;margin:14px 0}.callout.warn{border-left-color:var(--amber);background:rgba(255,209,102,.09)}.callout.fail{border-left-color:var(--red);background:rgba(255,95,118,.09)}
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}.three-col{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.col-card{border:1px solid var(--line);background:#0a1420;border-radius:15px;padding:16px}.col-card.good{border-color:rgba(101,240,164,.42)}.col-card.bad{border-color:rgba(255,95,118,.42)}.col-card.warn{border-color:rgba(255,209,102,.42)}
+  table{width:100%;border-collapse:separate;border-spacing:0;overflow:hidden;border:1px solid var(--line);border-radius:14px;background:#07111b}th,td{text-align:left;vertical-align:top;padding:11px 12px;border-bottom:1px solid var(--line)}th{background:#102033;color:#cfe6ff;font-size:12px;text-transform:uppercase;letter-spacing:.08em}tr:last-child td{border-bottom:0}td:first-child{font-weight:750;color:#fff}
+  details{border:1px solid var(--line);border-radius:14px;background:#091421;margin:12px 0}summary{cursor:pointer;padding:13px 15px;font-weight:850;color:#dcecff}details>div{padding:0 15px 15px}.tabs{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 14px}.tabs button{border:1px solid var(--line);background:#0d1b2a;color:#d8eaff;border-radius:999px;padding:8px 11px;cursor:pointer;font-weight:800}.tabs button.active{background:var(--cyan);color:#031019;border-color:var(--cyan)}.tab-panel{display:none}.tab-panel.active{display:block}
+  .next-action{position:sticky;bottom:12px;z-index:5;border:1px solid rgba(255,209,102,.5);background:linear-gradient(180deg,rgba(42,32,9,.96),rgba(20,16,7,.96));box-shadow:var(--shadow)}.log-entry{border-left:3px solid var(--line);padding:12px 0 12px 14px;margin:0 0 12px}.log-entry.latest{border-left-color:var(--cyan);background:rgba(77,215,255,.04);border-radius:0 12px 12px 0}.log-date{color:var(--muted);font-size:12px}.log-title{font-weight:900}.log-body{color:#cfe0f4}
+  .meter{height:10px;background:#07111b;border:1px solid var(--line);border-radius:999px;overflow:hidden}.meter span{display:block;height:100%;background:linear-gradient(90deg,var(--cyan),var(--green));width:20%}.small{font-size:13px}.footer{color:var(--muted);font-size:13px;margin-top:30px}.checklist label{display:block;padding:7px 0;color:#d8eaff}.checklist input{accent-color:var(--green);margin-right:8px}
+  @media(max-width:900px){.pipeline,.two-col,.three-col{grid-template-columns:1fr}.pipeline-stage:after{display:none}.next-action{position:static}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="page-header" id="header">
+  <div class="eyebrow">StormDeck rolling spec · living artifact</div>
+  <h1>Minimum credible storm-volume viewer first.</h1>
+  <p class="purpose">This artifact is the source-of-truth rolling spec for StormDeck’s near-term build: start with a synthetic 3D reflectivity MWE in a game engine, preserve the data contract needed for archived radar, then graduate to ATD/NEXRAD ingest and eventually live PAR.</p>
+  <div class="meta">
+    <span class="badge warn">NEEDS_REVIEW</span>
+    <span class="badge info">Last updated: 2026-05-21 15:46 CDT</span>
+    <span class="badge info">Current gate: MWE engine spike</span>
+    <span class="badge info">Owner: StormDeck team</span>
+    <span class="badge pass">Target workstation: RTX 4090 / 128 GB RAM</span>
+  </div>
+</header>
+
+<section class="card" id="pipeline" aria-label="Pipeline progress">
+  <h2>Where we are</h2>
+  <div class="pipeline">
+    <div class="pipeline-stage done"><strong>0. Concept framing</strong><small>PAR + game-engine storm cockpit thesis, ATD/NEXRAD path, replay before live.</small></div>
+    <div class="pipeline-stage current"><strong>1. Synthetic MWE</strong><small>Render fake-but-structured 3D reflectivity; prove engine, UX, and data contract.</small></div>
+    <div class="pipeline-stage pending"><strong>2. Archived radar</strong><small>Parse/gridding path for CfRadial/NEXRAD; preserve observed vs interpolated truth labels.</small></div>
+    <div class="pipeline-stage pending"><strong>3. Storm objects</strong><small>Manual semantic object, 60-second delta panel, warning/impact corridor.</small></div>
+    <div class="pipeline-stage pending"><strong>4. Live pipeline</strong><small>Live NEXRAD/PAR ingest, latency budget, storm-state server, future adaptive tasking.</small></div>
+  </div>
+</section>
+
+<main id="body">
+<section class="card" id="bottleneck">
+  <h2>Biggest current bottleneck</h2>
+  <div class="callout fail"><strong>Bottleneck:</strong> no executable renderer/data-contract MWE exists yet. Until a game engine can consume a simple time-indexed 3D reflectivity volume and expose slices/timeline/metadata, real radar ingest work risks optimizing for the wrong representation.</div>
+  <div class="two-col">
+    <div class="col-card bad"><h3>Do not do next</h3><p>Do not start by parsing every radar format, implementing live PAR streaming, or making cinematic weather effects. That path maximizes complexity before proving the front-end contract. Very artistic. Also operationally useless.</p></div>
+    <div class="col-card good"><h3>Do next</h3><p>Build a hard-coded game-engine desktop app that renders synthetic reflectivity frames from a stable JSON + binary/texture schema, with timeline scrub, slices, color map, storm motion arrow, and timestamp/source labels.</p></div>
+  </div>
+</section>
+
+<section class="card" id="product-vision">
+  <h2>Product vision</h2>
+  <p>StormDeck is a game-engine-powered 4D severe-weather cockpit that converts radar volumes and radar-derived objects into an interactive, geospatially aligned storm workspace. The product should help forecasters, researchers, trainers, and emergency managers answer: what changed, where, why it matters, who is affected, and what should happen next.</p>
+  <div class="callout"><strong>v0 vision:</strong> a desktop app renders a time-scrubbable synthetic supercell-like reflectivity volume with horizontal/vertical slicing, storm motion context, source/timestamp metadata, and a data interface that can later accept archived radar.</div>
+</section>
+
+<section class="card" id="tech-stack">
+  <h2>Recommended tech stack</h2>
+  <table>
+    <thead><tr><th>Layer</th><th>Default choice</th><th>Rationale</th></tr></thead>
+    <tbody>
+      <tr><td>Engine</td><td>Unreal Engine 5 for high-end MWE; keep Unity/WebGPU alternatives documented.</td><td>Best path for workstation-grade rendering, future cockpit UI, VR/video-wall options, and GPU volume rendering headroom.</td></tr>
+      <tr><td>Synthetic generator</td><td>Python + NumPy producing metadata JSON and raw/PNG/EXR texture frames.</td><td>Fast to iterate; mirrors later preprocessing pipeline; avoids engine-only data lock-in.</td></tr>
+      <tr><td>MWE data format</td><td>Metadata JSON + 3D texture payload; start with uint8 dBZ index or float16.</td><td>Small, GPU-friendly, easy to replace with real gridded radar cache.</td></tr>
+      <tr><td>Radar ingest later</td><td>Python, Py-ART, xarray/netCDF4, Zarr/chunked binary cache.</td><td>Matches ATD CfRadial/NEXRAD workflows and keeps scientific parsing outside the renderer.</td></tr>
+      <tr><td>Repo artifact</td><td><code>docs/rolling-spec.html</code> plus README/index link.</td><td>Single self-contained living spec; human-scannable; patchable by agents after each change.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section class="card" id="mvp-architecture">
+  <h2>MVP architecture</h2>
+  <div class="three-col">
+    <div class="col-card"><h3>1. Synthetic volume generator</h3><p>Creates 30–120 time frames of plausible dBZ values: storm core, anvil/precip shield, optional hook-ish appendage, and motion/intensification trend.</p></div>
+    <div class="col-card"><h3>2. Render cache</h3><p>Stores compact 3D texture frames with metadata: grid size, spacing, origin, field, units, timestamp, source, and observed/synthetic flag.</p></div>
+    <div class="col-card"><h3>3. Game-engine client</h3><p>Loads frames, renders volume/slices, provides timeline scrubber, metadata HUD, storm motion arrow, and export screenshot/video function.</p></div>
+  </div>
+  <details open><summary>MWE acceptance criteria</summary><div class="checklist" id="acceptance-checklist">
+    <label><input type="checkbox" /> Loads at least 30 synthetic frames without network access.</label>
+    <label><input type="checkbox" /> Renders reflectivity as a 3D volume or stacked slices using a labeled dBZ color map.</label>
+    <label><input type="checkbox" /> Provides horizontal slice and user-positioned vertical cross-section.</label>
+    <label><input type="checkbox" /> Shows timestamp, source=<code>synthetic_demo_v0</code>, frame index, scan age analogue, grid dimensions, and units.</label>
+    <label><input type="checkbox" /> Provides a basic “what changed in last 60 seconds” panel from synthetic frame deltas.</label>
+    <label><input type="checkbox" /> Exports a screenshot with metadata watermark.</label>
+  </div></details>
+</section>
+
+<section class="card" id="dream-architecture">
+  <h2>Dream architecture</h2>
+  <p>Live PAR/NEXRAD ingest flows through radar-edge preprocessing/QC, a central storm-state server, semantic object tracking, and multi-user game-engine clients. Emergency managers get simplified impact views; trainers get replay/scenario controls; researchers get full field/QC/sweep metadata. Future adaptive PAR tasking remains possible through a request layer, but not required for v1.</p>
+</section>
+
+<section class="card" id="hardware-pipeline">
+  <h2>Radar-side and render-side hardware pipeline</h2>
+  <table>
+    <thead><tr><th>Area</th><th>MWE</th><th>Archived prototype</th><th>Live/dream path</th></tr></thead>
+    <tbody>
+      <tr><td>Radar data level</td><td>Synthetic gridded reflectivity.</td><td>CfRadial/NEXRAD moments converted to render cache.</td><td>Moments and derived products from radar edge; raw I/Q only for specialized research.</td></tr>
+      <tr><td>Preprocessing</td><td>Python generator only.</td><td>Parser, QC flags, gridding, observed mask, provenance.</td><td>Edge QC/dealiasing, central storm-state aggregation, stream serialization.</td></tr>
+      <tr><td>Client GPU</td><td>RTX 4090 easily supports 256×256×64 × 60+ frames.</td><td>4090 remains a strong target for multiple fields and cached replay.</td><td>LOD, bricking, streaming, cloud/thin-client option for lower-end users.</td></tr>
+      <tr><td>System RAM</td><td>128 GB is ample.</td><td>Useful for local archives, preprocessing, and multi-case caches.</td><td>Server-side memory scales with stream count and retained time history.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section class="card" id="latency-budget">
+  <h2>Latency budget</h2>
+  <table>
+    <thead><tr><th>Path</th><th>Target</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td>MWE frame load</td><td>&lt; 500 ms initial local load for demo case after assets are built.</td><td>Prebaked assets; no radar ingest latency.</td></tr>
+      <tr><td>Interaction</td><td>60 FPS desktop; &lt;100 ms UI response.</td><td>4090 workstation target.</td></tr>
+      <tr><td>Archived parse/cache later</td><td>Seconds to minutes per case depending on gridding.</td><td>Acceptable offline; cache results.</td></tr>
+      <tr><td>Live/dream</td><td>Goal: radar availability + preprocessing + client update under 5–15 seconds.</td><td>Precise target depends on source cadence and product level.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section class="card" id="schemas">
+  <h2>Data schemas</h2>
+  <div class="tabs" role="tablist">
+    <button class="active" data-tab="volume-frame">RadarVolumeFrame</button>
+    <button data-tab="render-field">RenderedFieldTexture</button>
+    <button data-tab="storm-object">SemanticStormObject</button>
+    <button data-tab="warning-corridor">WarningImpactCorridor</button>
+    <button data-tab="timeline-event">TimelineEvent</button>
+    <button data-tab="annotation">Annotation</button>
+  </div>
+  <div id="volume-frame" class="tab-panel active"><pre>{
+  "frame_id": "synthetic_00042",
+  "timestamp_utc": "2026-05-21T20:15:00Z",
+  "source": "synthetic_demo_v0",
+  "field": "reflectivity",
+  "units": "dBZ",
+  "truth_status": "synthetic",
+  "grid": {"type":"cartesian", "nx":256, "ny":256, "nz":64, "dx_m":500, "dy_m":500, "dz_m":250},
+  "origin": {"lat":35.333, "lon":-97.277, "alt_m":370},
+  "payload_ref": "frames/reflectivity_00042.u8"
+}</pre></div>
+  <div id="render-field" class="tab-panel"><pre>{
+  "texture_id": "refl_tex_00042",
+  "encoding": "uint8_dbz_lut",
+  "dimensions": [256, 256, 64],
+  "value_range": [-10, 75],
+  "transfer_function": "nws_reflectivity_v0",
+  "observed_mask_ref": null,
+  "interpolation": "none_synthetic"
+}</pre></div>
+  <div id="storm-object" class="tab-panel"><pre>{
+  "object_id": "storm_A",
+  "type": "synthetic_supercell",
+  "source": "manual_or_synthetic",
+  "confidence": 1.0,
+  "centroid": {"x_m": 18000, "y_m": -12000, "z_m": 3500},
+  "motion": {"speed_mps": 18, "direction_deg": 55},
+  "evidence_frames": ["synthetic_00036", "synthetic_00042"]
+}</pre></div>
+  <div id="warning-corridor" class="tab-panel"><pre>{
+  "corridor_id": "demo_warning_001",
+  "type": "training_warning_corridor",
+  "geometry": {"format":"geojson", "coordinates": []},
+  "valid_time_utc": "2026-05-21T20:15:00Z",
+  "hazards": ["large_hail", "damaging_wind"],
+  "confidence": "demo_only"
+}</pre></div>
+  <div id="timeline-event" class="tab-panel"><pre>{
+  "event_id": "delta_00042",
+  "timestamp_utc": "2026-05-21T20:15:00Z",
+  "lookback_seconds": 60,
+  "summary": "+8 dBZ core intensification near storm centroid",
+  "linked_frame_ids": ["synthetic_00030", "synthetic_00042"]
+}</pre></div>
+  <div id="annotation" class="tab-panel"><pre>{
+  "annotation_id": "note_001",
+  "author": "StormDeck team",
+  "target": "storm_A",
+  "created_utc": "2026-05-21T20:16:00Z",
+  "text": "Demo object for MWE; not meteorological detection.",
+  "visibility": "operator_and_export"
+}</pre></div>
+</section>
+
+<section class="card" id="visualization-grammar">
+  <h2>Visualization grammar</h2>
+  <table>
+    <thead><tr><th>Layer</th><th>Visual rule</th><th>Truth rule</th></tr></thead>
+    <tbody>
+      <tr><td>Reflectivity</td><td>Conventional dBZ ramp; opacity by intensity/QC; avoid over-smoothing storm structure.</td><td>Label synthetic, observed, interpolated, or derived.</td></tr>
+      <tr><td>Velocity</td><td>Diverging inbound/outbound palette; optional storm-relative mode later.</td><td>Show Nyquist/aliasing context; never imply tornado detection by color alone.</td></tr>
+      <tr><td>Rotation</td><td>Outline/halo on top of velocity, not opaque blob.</td><td>Derived feature with confidence and source fields.</td></tr>
+      <tr><td>Hail</td><td>Probabilistic texture or contour over reflectivity/dual-pol.</td><td>Derived; must show algorithm/proxy and confidence.</td></tr>
+      <tr><td>Debris</td><td>Distinct stipple/contour tied to dual-pol evidence.</td><td>High consequence; label uncertainty aggressively.</td></tr>
+      <tr><td>Warning/impact</td><td>Corridor polygons, towns/assets, ETA labels.</td><td>Decision overlay, not radar observation.</td></tr>
+      <tr><td>Uncertainty</td><td>Hatching, transparency, or confidence badges.</td><td>Uncertainty must be visible in screenshots/video exports.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section class="card" id="ux-navigation">
+  <h2>UX/navigation model</h2>
+  <table>
+    <thead><tr><th>Control</th><th>MWE behavior</th><th>Operational reason</th></tr></thead>
+    <tbody>
+      <tr><td>Orbit/pan/zoom</td><td>Inspect synthetic storm volume from any angle.</td><td>Spatial comprehension without implying the 3D view is automatically superior.</td></tr>
+      <tr><td>Timeline scrubber</td><td>Move through frames; show current and lookback time.</td><td>PAR value is evolution speed; the UI must make change obvious.</td></tr>
+      <tr><td>Horizontal slice</td><td>Altitude slider clips/planes through volume.</td><td>Forecasters need familiar plan-view reasoning.</td></tr>
+      <tr><td>Vertical slice</td><td>User drags cross-section line; view side profile.</td><td>Reveals storm depth/tilt without visual guesswork.</td></tr>
+      <tr><td>What changed panel</td><td>Lists top synthetic deltas over 60 seconds.</td><td>Reduces cognitive load under warning pressure.</td></tr>
+      <tr><td>Metadata HUD</td><td>Always show source, time, units, grid, status.</td><td>Trust requires provenance in the operator’s visual field.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section class="card" id="two-week-plan">
+  <h2>First 2-week feasibility plan</h2>
+  <table>
+    <thead><tr><th>Window</th><th>Work</th><th>Exit criterion</th></tr></thead>
+    <tbody>
+      <tr><td>Days 1–2</td><td>Choose engine path; create repo structure; define JSON + payload schema; generate first synthetic volume.</td><td>One frame loads into engine or standalone renderer.</td></tr>
+      <tr><td>Days 3–4</td><td>Implement reflectivity color map and 3D/stacked-slice rendering.</td><td>256×256×64 synthetic frame renders interactively.</td></tr>
+      <tr><td>Days 5–6</td><td>Add timeline and 30–60 generated frames.</td><td>Scrubbing works with stable FPS on 4090 target.</td></tr>
+      <tr><td>Days 7–8</td><td>Add horizontal and vertical slicing.</td><td>Both slice modes update interactively and show position labels.</td></tr>
+      <tr><td>Days 9–10</td><td>Add metadata HUD, storm motion arrow, and basic map/ground plane.</td><td>Screenshot is self-explanatory without verbal narration.</td></tr>
+      <tr><td>Days 11–12</td><td>Add semantic demo storm object and 60-second delta panel.</td><td>Selectable object and “what changed” summary work.</td></tr>
+      <tr><td>Days 13–14</td><td>Export screenshot/video; update this rolling spec with results and new bottleneck.</td><td>Demo artifact can be shared from repo.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section class="card" id="milestones">
+  <h2>Prototype milestones</h2>
+  <table>
+    <thead><tr><th>Milestone</th><th>Status</th><th>Definition of done</th></tr></thead>
+    <tbody>
+      <tr><td>M0 Rolling spec in repo</td><td><span class="badge pass">PASS</span></td><td>Self-contained HTML artifact with bottleneck, next step, schemas, and log.</td></tr>
+      <tr><td>M1 Synthetic generator</td><td><span class="badge info">PENDING</span></td><td>Produces deterministic frame sequence and metadata.</td></tr>
+      <tr><td>M2 Engine volume viewer</td><td><span class="badge info">PENDING</span></td><td>Loads and renders synthetic reflectivity at target FPS.</td></tr>
+      <tr><td>M3 Slices + timeline</td><td><span class="badge info">PENDING</span></td><td>Time scrubber, horizontal slice, vertical slice.</td></tr>
+      <tr><td>M4 Semantic object + deltas</td><td><span class="badge info">PENDING</span></td><td>Selectable object and 60-second change panel.</td></tr>
+      <tr><td>M5 Archived radar bridge</td><td><span class="badge info">PENDING</span></td><td>One real archived case converted to same render contract.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section class="card" id="risk-register">
+  <h2>Risk register</h2>
+  <table>
+    <thead><tr><th>Risk</th><th>Severity</th><th>Mitigation</th></tr></thead>
+    <tbody>
+      <tr><td>Renderer contract wrong</td><td><span class="badge fail">HIGH</span></td><td>Build synthetic MWE first; keep schema engine-neutral; update spec after each implementation change.</td></tr>
+      <tr><td>Pretty 3D misleads operators</td><td><span class="badge fail">HIGH</span></td><td>Always label source, timestamp, units, synthetic/observed/interpolated/derived status.</td></tr>
+      <tr><td>Volume rendering performance cliff</td><td><span class="badge warn">MED</span></td><td>Start with 256×256×64 and 4090 target; profile before increasing resolution.</td></tr>
+      <tr><td>Archived radar ingest complexity</td><td><span class="badge warn">MED</span></td><td>Defer until renderer contract exists; use Python/Py-ART/xarray path.</td></tr>
+      <tr><td>Live PAR access unavailable</td><td><span class="badge info">LOW v0</span></td><td>Replay mode and synthetic MWE do not require live access.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section class="card" id="open-questions">
+  <h2>Open questions requiring external answers</h2>
+  <table>
+    <thead><tr><th>Question</th><th>Why it matters</th><th>When needed</th></tr></thead>
+    <tbody>
+      <tr><td>Unreal vs Unity for first executable?</td><td>Determines initial project template, shader/volume path, and team skill requirements.</td><td>Before M1/M2 implementation.</td></tr>
+      <tr><td>What exact demo machine specs beyond 4090/128 GB?</td><td>CPU/storage/OS affect engine build and large-file cache choices.</td><td>Before performance claims.</td></tr>
+      <tr><td>Which archived case will be first real-data bridge?</td><td>Needed after synthetic MWE to validate the contract.</td><td>After M3.</td></tr>
+      <tr><td>Who is primary first reviewer: forecaster, researcher, or emergency manager?</td><td>Changes UI emphasis and acceptance criteria.</td><td>Before M4 UX polish.</td></tr>
+    </tbody>
+  </table>
+</section>
+</main>
+
+<section class="card next-action" id="next-action">
+  <h2>Next action</h2>
+  <p><strong>Build the first synthetic data generator and engine-loading contract:</strong> produce 30 frames of <code>256×256×64</code> reflectivity with metadata JSON, then load one frame into the chosen engine.</p>
+</section>
+
+<section class="card" id="iteration-log">
+  <h2>Iteration log</h2>
+  <div class="log-entry latest">
+    <div class="log-date">2026-05-21 15:46 CDT</div>
+    <div class="log-title">Rolling spec created</div>
+    <div class="log-body">Shifted near-term plan from archived ATD-first implementation to synthetic game-engine MWE first. Current bottleneck is now executable renderer/data-contract proof. Next action is to generate 30 synthetic reflectivity frames and load one into the engine.</div>
+  </div>
+</section>
+
+<div class="footer">Update protocol: after every meaningful StormDeck change, edit this file in place, update the header timestamp/status, revise the bottleneck and single next action, move pipeline state if needed, and append a latest iteration-log entry without deleting older entries.</div>
+</div>
+<script>
+  document.querySelectorAll('.tabs button').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const parent=btn.closest('.card');
+      parent.querySelectorAll('.tabs button').forEach(b=>b.classList.remove('active'));
+      parent.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+      btn.classList.add('active');
+      parent.querySelector('#'+btn.dataset.tab).classList.add('active');
+    });
+  });
+  const boxes=[...document.querySelectorAll('#acceptance-checklist input')];
+  const saved=JSON.parse(localStorage.getItem('stormdeck-rolling-spec-checks')||'[]');
+  boxes.forEach((b,i)=>{b.checked=!!saved[i]; b.addEventListener('change',()=>localStorage.setItem('stormdeck-rolling-spec-checks',JSON.stringify(boxes.map(x=>x.checked))))});
+</script>
+</body>
+</html>

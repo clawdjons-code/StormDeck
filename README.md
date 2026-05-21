@@ -2,12 +2,13 @@
 
 StormDeck is a game-engine-powered 4D severe-weather interface concept for phased-array radar, NEXRAD, and radar-derived storm data.
 
-## Posted spec
+## Posted specs
 
+- [Rolling interactive spec](docs/rolling-spec.html) — current source of truth for bottleneck, next action, milestones, schemas, and iteration log.
 - [Interactive ATD initial spec](stormdeck-atd-initial-spec.html)
 - [Failure-mode review](docs/failure-modes.md)
 
-This first public artifact focuses on NOAA/NSSL Advanced Technology Demonstrator data output, especially public `KATD` CfRadial 1 NetCDF files from the NSSL THREDDS archive.
+The rolling spec currently prioritizes a synthetic game-engine MWE before archived radar ingest. The ATD artifact focuses on NOAA/NSSL Advanced Technology Demonstrator data output, especially public `KATD` CfRadial 1 NetCDF files from the NSSL THREDDS archive.
 
 ## MVP framing
 
