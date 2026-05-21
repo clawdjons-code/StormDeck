@@ -22,6 +22,7 @@
   details{border:1px solid var(--line);border-radius:14px;background:#091421;margin:12px 0}summary{cursor:pointer;padding:13px 15px;font-weight:850;color:#dcecff}details>div{padding:0 15px 15px}.tabs{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 14px}.tabs button{border:1px solid var(--line);background:#0d1b2a;color:#d8eaff;border-radius:999px;padding:8px 11px;cursor:pointer;font-weight:800}.tabs button.active{background:var(--cyan);color:#031019;border-color:var(--cyan)}.tab-panel{display:none}.tab-panel.active{display:block}
   .next-action{position:sticky;bottom:12px;z-index:5;border:1px solid rgba(255,209,102,.5);background:linear-gradient(180deg,rgba(42,32,9,.96),rgba(20,16,7,.96));box-shadow:var(--shadow)}.log-entry{border-left:3px solid var(--line);padding:12px 0 12px 14px;margin:0 0 12px}.log-entry.latest{border-left-color:var(--cyan);background:rgba(77,215,255,.04);border-radius:0 12px 12px 0}.log-date{color:var(--muted);font-size:12px}.log-title{font-weight:900}.log-body{color:#cfe0f4}
   .meter{height:10px;background:#07111b;border:1px solid var(--line);border-radius:999px;overflow:hidden}.meter span{display:block;height:100%;background:linear-gradient(90deg,var(--cyan),var(--green));width:20%}.small{font-size:13px}.footer{color:var(--muted);font-size:13px;margin-top:30px}.checklist label{display:block;padding:7px 0;color:#d8eaff}.checklist input{accent-color:var(--green);margin-right:8px}
+  .topo-wrap{position:relative;border:1px solid var(--line);border-radius:18px;background:radial-gradient(circle at 50% 0%,rgba(77,215,255,.10),transparent 45%),#06101a;overflow:hidden;margin-top:14px}.topo-svg{display:block;width:100%;height:auto}.topo-node{cursor:pointer}.topo-node rect{transition:stroke .18s ease,filter .18s ease}.topo-node:hover rect{stroke:var(--cyan);filter:drop-shadow(0 0 8px rgba(77,215,255,.55))}.topo-node text{pointer-events:none}.topo-legend{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px}.legend-chip{border:1px solid var(--line);background:#0a1420;border-radius:12px;padding:10px;font-size:13px}.legend-chip b{display:block;color:#fff}.terrain-note{font-size:13px;color:var(--muted)}
   @media(max-width:900px){.pipeline,.two-col,.three-col{grid-template-columns:1fr}.pipeline-stage:after{display:none}.next-action{position:static}}
 </style>
 </head>
@@ -33,7 +34,7 @@
   <p class="purpose">This artifact is the source-of-truth rolling spec for StormDeck’s near-term build: start with a synthetic 3D reflectivity MWE in a game engine, preserve the data contract needed for archived radar, then graduate to ATD/NEXRAD ingest and eventually live PAR.</p>
   <div class="meta">
     <span class="badge warn">NEEDS_REVIEW</span>
-    <span class="badge info">Last updated: 2026-05-21 15:46 CDT</span>
+    <span class="badge info">Last updated: 2026-05-21 17:06 CDT</span>
     <span class="badge info">Current gate: MWE engine spike</span>
     <span class="badge info">Owner: StormDeck team</span>
     <span class="badge pass">Target workstation: RTX 4090 / 128 GB RAM</span>
@@ -96,6 +97,46 @@
     <label><input type="checkbox" /> Provides a basic “what changed in last 60 seconds” panel from synthetic frame deltas.</label>
     <label><input type="checkbox" /> Exports a screenshot with metadata watermark.</label>
   </div></details>
+</section>
+
+<section class="card" id="topographic-data-path">
+  <h2>Topographic view of the data path</h2>
+  <p class="muted">This view treats the system like terrain: raw/authoritative data starts at the high ground on the left, then descends through preprocessing, cache, rendering, and operator decisions. The rule is simple: every downhill step must preserve provenance, uncertainty, and whether the pixels are synthetic, observed, interpolated, or derived.</p>
+  <div class="topo-wrap" role="img" aria-label="Topographic data path from radar source through preprocessing, render cache, game engine, operator view, and exported decision artifacts">
+    <svg class="topo-svg" viewBox="0 0 960 430" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="sky" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#0d2133"/><stop offset="1" stop-color="#06101a"/></linearGradient>
+        <linearGradient id="terrain" x1="0" x2="1"><stop offset="0" stop-color="#183d32"/><stop offset=".45" stop-color="#22402c"/><stop offset="1" stop-color="#3a2e1c"/></linearGradient>
+        <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#4dd7ff"/></marker>
+        <filter id="soft"><feGaussianBlur stdDeviation="7"/></filter>
+      </defs>
+      <rect width="960" height="430" fill="url(#sky)"/>
+      <path d="M0 315 C110 250 174 274 252 222 C345 160 440 184 520 145 C650 80 768 117 960 65 L960 430 L0 430 Z" fill="url(#terrain)" opacity=".88"/>
+      <path d="M0 315 C110 250 174 274 252 222 C345 160 440 184 520 145 C650 80 768 117 960 65" fill="none" stroke="#65f0a4" stroke-width="3" opacity=".75"/>
+      <path d="M10 348 C150 300 230 306 330 260 C470 198 590 198 720 154 C830 117 890 110 950 102" fill="none" stroke="#91a9c3" stroke-width="1" opacity=".35"/>
+      <path d="M18 378 C160 348 250 344 370 310 C510 270 650 256 782 220 C852 202 905 196 950 188" fill="none" stroke="#91a9c3" stroke-width="1" opacity=".22"/>
+      <path d="M110 96 C185 102 226 139 300 145 C392 153 448 111 528 122 C630 136 676 191 762 197 C828 202 868 177 920 166" fill="none" stroke="#4dd7ff" stroke-width="4" marker-end="url(#arrow)" opacity=".95"/>
+      <path d="M150 124 C205 151 225 195 272 222" fill="none" stroke="#ffd166" stroke-dasharray="6 6" stroke-width="3" marker-end="url(#arrow)" opacity=".9"/>
+      <path d="M576 146 C620 174 647 210 682 246" fill="none" stroke="#ffd166" stroke-dasharray="6 6" stroke-width="3" marker-end="url(#arrow)" opacity=".9"/>
+
+      <g class="topo-node"><title>1. Source volume: synthetic now; ATD/NEXRAD moments later. Highest-trust source data stays immutable.</title><rect x="42" y="56" width="160" height="78" rx="14" fill="#102033" stroke="#65f0a4" stroke-width="2"/><text x="122" y="86" text-anchor="middle" fill="#eaf4ff" font-size="15" font-weight="800">Source volume</text><text x="122" y="110" text-anchor="middle" fill="#91a9c3" font-size="12">synthetic → ATD/NEXRAD</text></g>
+      <g class="topo-node"><title>2. Truth metadata: timestamp, grid/sweep geometry, source, units, QC/provenance, observed/synthetic status.</title><rect x="260" y="105" width="158" height="78" rx="14" fill="#102033" stroke="#4dd7ff" stroke-width="2"/><text x="339" y="136" text-anchor="middle" fill="#eaf4ff" font-size="15" font-weight="800">Truth metadata</text><text x="339" y="160" text-anchor="middle" fill="#91a9c3" font-size="12">time · units · provenance</text></g>
+      <g class="topo-node"><title>3. Preprocess/cache: generated or parsed data becomes GPU-friendly 3D textures while preserving the original source contract.</title><rect x="482" y="82" width="166" height="84" rx="14" fill="#102033" stroke="#b99cff" stroke-width="2"/><text x="565" y="114" text-anchor="middle" fill="#eaf4ff" font-size="15" font-weight="800">Preprocess/cache</text><text x="565" y="138" text-anchor="middle" fill="#91a9c3" font-size="12">3D texture frames</text></g>
+      <g class="topo-node"><title>4. Game-engine renderer: volume/slice shaders render reflectivity while keeping metadata and truth labels visible.</title><rect x="705" y="151" width="166" height="84" rx="14" fill="#102033" stroke="#ff9f5a" stroke-width="2"/><text x="788" y="183" text-anchor="middle" fill="#eaf4ff" font-size="15" font-weight="800">Engine renderer</text><text x="788" y="207" text-anchor="middle" fill="#91a9c3" font-size="12">volume · slices · HUD</text></g>
+      <g class="topo-node"><title>5. Operator decision layer: what changed, storm object, warning corridor, screenshot/video export. This is derived decision support, not raw radar.</title><rect x="640" y="274" width="212" height="78" rx="14" fill="#102033" stroke="#ffd166" stroke-width="2"/><text x="746" y="304" text-anchor="middle" fill="#eaf4ff" font-size="15" font-weight="800">Decision overlays</text><text x="746" y="328" text-anchor="middle" fill="#91a9c3" font-size="12">deltas · objects · warnings · export</text></g>
+
+      <text x="52" y="374" fill="#91a9c3" font-size="12">High-trust source ridge</text>
+      <text x="724" y="386" fill="#91a9c3" font-size="12">Lower terrain = derived/operator-facing products</text>
+      <text x="742" y="74" fill="#4dd7ff" font-size="13" font-weight="800">blue path: data contract</text>
+      <text x="48" y="176" fill="#ffd166" font-size="13" font-weight="800">dashed path: derived views</text>
+    </svg>
+  </div>
+  <div class="topo-legend">
+    <div class="legend-chip"><b>High ground</b><span class="terrain-note">Source volume is immutable. Synthetic now; observed radar later.</span></div>
+    <div class="legend-chip"><b>Contour lines</b><span class="terrain-note">Each descent adds processing and potential interpretation risk.</span></div>
+    <div class="legend-chip"><b>Blue flow</b><span class="terrain-note">Engine contract: metadata + texture payload + truth status.</span></div>
+    <div class="legend-chip"><b>Gold flow</b><span class="terrain-note">Derived products: slices, deltas, objects, warning/export layers.</span></div>
+  </div>
 </section>
 
 <section class="card" id="dream-architecture">
@@ -285,12 +326,17 @@
 
 <section class="card next-action" id="next-action">
   <h2>Next action</h2>
-  <p><strong>Build the first synthetic data generator and engine-loading contract:</strong> produce 30 frames of <code>256×256×64</code> reflectivity with metadata JSON, then load one frame into the chosen engine.</p>
+  <p><strong>Build the first synthetic data generator and engine-loading contract:</strong> produce 30 frames of <code>256×256×64</code> reflectivity with metadata JSON, then load one frame into the chosen engine using the topographic data-path as the implementation map.</p>
 </section>
 
 <section class="card" id="iteration-log">
   <h2>Iteration log</h2>
   <div class="log-entry latest">
+    <div class="log-date">2026-05-21 17:06 CDT</div>
+    <div class="log-title">Topographic data-path view added</div>
+    <div class="log-body">Added an interactive SVG terrain-style system map showing source volume, truth metadata, preprocess/cache, engine renderer, and decision overlays. The view emphasizes that derived/operator-facing products sit downhill from source data and must preserve provenance and uncertainty.</div>
+  </div>
+  <div class="log-entry">
     <div class="log-date">2026-05-21 15:46 CDT</div>
     <div class="log-title">Rolling spec created</div>
     <div class="log-body">Shifted near-term plan from archived ATD-first implementation to synthetic game-engine MWE first. Current bottleneck is now executable renderer/data-contract proof. Next action is to generate 30 synthetic reflectivity frames and load one into the engine.</div>
