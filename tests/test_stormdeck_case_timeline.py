@@ -1,4 +1,5 @@
 import importlib.util
+import json
 from pathlib import Path
 
 
@@ -126,3 +127,21 @@ def test_preserves_per_scan_cadence_and_variable_gate_counts():
     assert supercell["gate_count_values_sample"] == [1613, 1553, 1523]
     assert timeline["engine_hints"]["contains_mixed_scan_strategies"] is True
     assert timeline["engine_hints"]["timeline_should_group_by_scan_name"] is True
+
+
+def test_main_creates_missing_output_parent_directories(tmp_path):
+    mod = load_module()
+    inventory_path = tmp_path / "inventory.json"
+    inventory_path.write_text(json.dumps(sample_inventory()), encoding="utf-8")
+    output_path = tmp_path / "missing" / "nested" / "case_timeline.json"
+
+    rc = mod.main([
+        "--inventory", str(inventory_path),
+        "--case-id", "case",
+        "--out", str(output_path),
+    ])
+
+    assert rc == 0
+    assert output_path.exists()
+    timeline = json.loads(output_path.read_text(encoding="utf-8"))
+    assert timeline["schema"] == "stormdeck.case_timeline.v0"
