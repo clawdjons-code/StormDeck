@@ -68,6 +68,31 @@ python3 scripts/stormdeck_case_timeline.py \
   --out /data/stormdeck/exports/20260402_031550/case_timeline.json
 ```
 
+Summarize the generated timeline by pointing `p` at the absolute output path:
+
+```bash
+python3 - <<'PY'
+import json
+p = "/data/stormdeck/exports/20260402_031550/case_timeline.json"
+m = json.load(open(p))
+print("schema:", m["schema"])
+print("case_id:", m["case_id"])
+print("volume_count:", m["volume_count"])
+print("case_start_time:", m["case_start_time"])
+print("case_end_time:", m["case_end_time"])
+print("median_volume_start_spacing_s:", m["median_volume_start_spacing_s"])
+print("scan_name_counts:", m["scan_name_counts"])
+print("scan_mode_counts:", m["scan_mode_counts"])
+print("playlist_pattern_sample:", m["playlist_pattern_sample"])
+print("warnings:")
+for w in m["warnings"]:
+    print("-", w)
+print("scan_summaries:")
+for name, s in m["scan_summaries"].items():
+    print(name, s)
+PY
+```
+
 Known `wea-fs` validation input:
 
 ```text
