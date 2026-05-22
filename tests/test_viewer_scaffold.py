@@ -55,6 +55,7 @@ def test_viewer_has_local_file_controls_for_wea_fs_exports():
     assert 'data-json-role="temporal_tracks"' in html
     assert 'data-json-role="change_summary"' in html
     assert 'data-json-role="field_preview"' in html
+    assert 'data-json-role="map_overlays"' in html
     assert "FileReader" in html
     assert "renderCaseSummary" in html
     assert "renderTrackList" in html
@@ -125,6 +126,20 @@ def test_viewer_map_context_has_orientation_and_range_sketch_labels():
     assert "range rings" in html
     for label in ["'N'", "'E'", "'S'", "'W'"]:
         assert label in html
+
+
+def test_viewer_supports_map_overlays_contract_without_gridding_radar():
+    html = VIEWER.read_text(encoding="utf-8")
+
+    assert "map_overlays.json" in html
+    assert "stormdeck.map_overlays.v0" in html
+    assert "drawMapOverlays" in html
+    assert "projectLatLonToSketch" in html
+    assert "warning_corridor" in html
+    assert "town_points" in html
+    assert "county_boundaries" in html
+    assert "state_boundaries" in html
+    assert "context overlays only" in html
 
 
 def test_viewer_layout_prevents_long_labels_from_jumping_tracks():

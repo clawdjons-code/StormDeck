@@ -193,7 +193,7 @@
       <div class="mark">SD</div>
       <div>
         <h1>StormDeck Replay Cockpit</h1>
-        <div class="subtitle">Observed metadata plus optional field sample • stormdeck.case_timeline.v0 • stormdeck.temporal_tracks.v0 • stormdeck.change_summary.v0 • stormdeck.field_preview.v0</div>
+        <div class="subtitle">Observed metadata plus optional field sample • stormdeck.case_timeline.v0 • stormdeck.temporal_tracks.v0 • stormdeck.change_summary.v0 • stormdeck.field_preview.v0 • stormdeck.map_overlays.v0</div>
       </div>
     </div>
     <div id="source-status" class="source-strip" aria-live="polite">
@@ -222,6 +222,7 @@
           <label class="file-card"><span>temporal_tracks.json</span><input type="file" accept="application/json,.json" data-json-role="temporal_tracks"></label>
           <label class="file-card"><span>change_summary.json</span><input type="file" accept="application/json,.json" data-json-role="change_summary"></label>
           <label class="file-card"><span>field_preview.json</span><input type="file" accept="application/json,.json" data-json-role="field_preview"></label>
+          <label class="file-card"><span>map_overlays.json</span><input type="file" accept="application/json,.json" data-json-role="map_overlays"></label>
         </div>
         <p class="muted">Expected path shape: <span class="mono">/data/stormdeck/exports/20260402_031550/*.json</span>. Browser security requires selecting local files or serving this viewer from the export directory.</p>
       </div>
@@ -297,7 +298,7 @@
   </main>
 
   <script>
-    const state = { case_timeline: null, temporal_tracks: null, change_summary: null, field_preview: null, selectedTrackId: null };
+    const state = { case_timeline: null, temporal_tracks: null, change_summary: null, field_preview: null, map_overlays: null, selectedTrackId: null };
     const ATD_REFLECTIVITY_STOPS = [
       { value: 90, color: '#050505' },
       { value: 80, color: '#00e5ff' },
@@ -358,10 +359,10 @@
     }
 
     function renderSourceStatus() {
-      const loaded = ['case_timeline', 'temporal_tracks', 'change_summary', 'field_preview'].filter(key => state[key]);
+      const loaded = ['case_timeline', 'temporal_tracks', 'change_summary', 'field_preview', 'map_overlays'].filter(key => state[key]);
       const status = document.getElementById('source-status');
       status.innerHTML = `
-        <span class="pill ${loaded.length >= 3 ? 'good' : 'warn'}">${loaded.length}/4 exports loaded</span>
+        <span class="pill ${loaded.length >= 3 ? 'good' : 'warn'}">${loaded.length}/5 exports loaded</span>
         <span class="pill">data source: local JSON</span>
         <span class="pill">confidence: ${state.field_preview ? 'observed field sample' : 'metadata-safe'}</span>
         <span class="pill">uncertainty: ${state.field_preview ? 'sampled radar arrays; no interpolation' : 'radar arrays not read'}</span>
@@ -597,6 +598,69 @@
       ctx.restore();
     }
 
+    function projectLatLonToSketch(lat, lon, site, pixelsPerKm = 1) {
+      const earthRadiusKm = 6371;
+      const dLat = (Number(lat) - Number(site.latitude_deg)) * Math.PI / 180;
+      const dLon = (Number(lon) - Number(site.longitude_deg)) * Math.PI / 180;
+      const meanLat = ((Number(lat) + Number(site.latitude_deg)) / 2) * Math.PI / 180;
+      const northKm = dLat * earthRadiusKm;
+      const eastKm = dLon * earthRadiusKm * Math.cos(meanLat);
+      return { x: eastKm * pixelsPerKm, y: -northKm * pixelsPerKm };
+    }
+
+    function drawOverlayPolyline(ctx, points, site, cx, cy, pixelsPerKm, color, close = false) {
+      const projected = points
+        .map(point => projectLatLonToSketch(point.latitude_deg ?? point.lat, point.longitude_deg ?? point.lon, site, pixelsPerKm))
+        .filter(point => Number.isFinite(point.x) && Number.isFinite(point.y));
+      if (projected.length < 2) return;
+      ctx.beginPath();
+      projected.forEach((point, index) => {
+        const x = cx + point.x;
+        const y = cy + point.y;
+        if (index === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      });
+      if (close) ctx.closePath();
+      ctx.strokeStyle = color;
+      ctx.stroke();
+      if (close) {
+        ctx.fillStyle = color.replace('0.88', '0.10').replace('0.72', '0.10');
+        ctx.fill();
+      }
+    }
+
+    function overlayList(value) {
+      if (!value) return [];
+      return Array.isArray(value) ? value : [value];
+    }
+
+    function drawMapOverlays(ctx, preview, cx, cy, radius) {
+      const overlays = state.map_overlays;
+      const site = preview.site ?? {};
+      if (!overlays || site.latitude_deg === null || site.longitude_deg === null || site.latitude_deg === undefined || site.longitude_deg === undefined) return 0;
+      const outline = preview.map_context?.sector_outline ?? {};
+      const pixelsPerKm = radius / Math.max(1, Number(outline.range_max_m ?? 1000) / 1000);
+      let count = 0;
+      ctx.save();
+      ctx.lineWidth = 1.2;
+      overlayList(overlays.state_boundaries).forEach(line => { drawOverlayPolyline(ctx, line.points ?? line.coordinates ?? [], site, cx, cy, pixelsPerKm, 'rgba(148, 163, 184, 0.58)'); count++; });
+      overlayList(overlays.county_boundaries).forEach(line => { drawOverlayPolyline(ctx, line.points ?? line.coordinates ?? [], site, cx, cy, pixelsPerKm, 'rgba(100, 116, 139, 0.46)'); count++; });
+      overlayList(overlays.warning_corridors ?? overlays.warning_corridor).forEach(poly => { drawOverlayPolyline(ctx, poly.points ?? poly.polygon ?? poly.coordinates ?? [], site, cx, cy, pixelsPerKm, 'rgba(250, 204, 21, 0.88)', true); count++; });
+      ctx.font = '10px Inter, system-ui';
+      ctx.fillStyle = '#f7f8f8';
+      (overlays.town_points ?? []).forEach(town => {
+        const point = projectLatLonToSketch(town.latitude_deg ?? town.lat, town.longitude_deg ?? town.lon, site, pixelsPerKm);
+        if (!Number.isFinite(point.x) || !Number.isFinite(point.y)) return;
+        ctx.fillStyle = 'rgba(248, 250, 252, 0.88)';
+        ctx.beginPath();
+        ctx.arc(cx + point.x, cy + point.y, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillText(town.name ?? 'town', cx + point.x + 5, cy + point.y - 4);
+        count++;
+      });
+      ctx.restore();
+      return count;
+    }
+
     function drawMapContext(canvas, preview) {
       const ctx = canvas.getContext('2d');
       const width = canvas.width;
@@ -643,6 +707,7 @@
       ctx.closePath();
       ctx.fill();
       ctx.stroke();
+      const overlayCount = drawMapOverlays(ctx, preview, cx, cy, radius);
       labelSectorBoundary(ctx, cx, cy, radius, azMin, 'right');
       labelSectorBoundary(ctx, cx, cy, radius, azMax, 'left');
 
@@ -663,6 +728,7 @@
           <li>Sector: <span class="mono">${fmtNumber(azMin, 1, '°')}–${fmtNumber(azMax, 1, '°')}</span> • max range ${fmtNumber((outline.range_max_m ?? 0) / 1000, 1, ' km')}</li>
           <li>Geographic context is a radar site marker plus sector outline only; not gridded and not a map-projected gate field.</li>
           <li>Orientation sketch only: cardinal labels, boundary bearings, and range rings aid readability but are not a projected basemap.</li>
+          <li>Map overlays: <span class="mono">${fmt(overlayCount)}</span> context overlays only from <span class="mono">stormdeck.map_overlays.v0</span>; overlays do not grid or alter radar gates.</li>
         </ul>`;
     }
 
