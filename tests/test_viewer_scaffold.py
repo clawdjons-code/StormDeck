@@ -220,6 +220,19 @@ def test_viewer_supports_field_preview_playlist_scrubber_and_change_ghosts():
     assert "frame playlist" in html
 
 
+def test_viewer_accepts_playlist_schema_from_either_field_picker_and_disables_single_frame_playback():
+    html = VIEWER.read_text(encoding="utf-8")
+
+    assert "ingestLoadedJson" in html
+    assert "payload?.schema === 'stormdeck.field_preview_playlist.v0'" in html
+    assert "payload?.schema === 'stormdeck.field_preview.v0'" in html
+    assert "field-preview-schema-badge" in html
+    assert "playlist loaded" in html
+    assert "Load field_preview_playlist.json to enable frame playback" in html
+    assert "playback.disabled = frameMax < 1" in html
+    assert "if ((state.field_preview_playlist?.frames?.length ?? 0) < 2)" in html
+
+
 def test_viewer_batches_animation_and_2_5d_controls_with_honesty_language():
     html = VIEWER.read_text(encoding="utf-8")
 

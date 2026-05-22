@@ -286,7 +286,7 @@
     </section>
 
     <section class="panel" id="field-preview" style="margin-top:18px;">
-      <div class="section-title"><h3>Observed radar field sample</h3><span class="mono">stormdeck.field_preview.v0</span></div>
+      <div class="section-title"><h3>Observed radar field sample</h3><span id="field-preview-schema-badge" class="mono">stormdeck.field_preview.v0</span></div>
       <div class="scene-toolbar" aria-label="radar scene controls">
         <div class="scene-mode-toggle" role="group" aria-label="field preview render mode">
           <button type="button" data-scene-mode="native-polar">Native polar</button>
@@ -400,6 +400,12 @@
     }
 
     function toggleFramePlayback() {
+      if ((state.field_preview_playlist?.frames?.length ?? 0) < 2) {
+        state.framePlaybackPlaying = false;
+        stopFramePlayback();
+        renderFieldPreview();
+        return;
+      }
       state.framePlaybackPlaying = !state.framePlaybackPlaying;
       if (state.framePlaybackPlaying) startFramePlayback(); else stopFramePlayback();
       renderFieldPreview();
@@ -469,6 +475,26 @@
       button.addEventListener('click', () => setMapFocusMode(button.dataset.mapFocusMode));
     });
 
+    function ingestLoadedJson(role, payload) {
+      if (payload?.schema === 'stormdeck.field_preview_playlist.v0') {
+        state.field_preview_playlist = payload;
+        state.field_preview = null;
+        state.currentFrameIndex = 0;
+        state.framePlaybackPlaying = false;
+        stopFramePlayback();
+        return;
+      }
+      if (payload?.schema === 'stormdeck.field_preview.v0') {
+        state.field_preview = payload;
+        state.field_preview_playlist = null;
+        state.currentFrameIndex = 0;
+        state.framePlaybackPlaying = false;
+        stopFramePlayback();
+        return;
+      }
+      state[role] = payload;
+    }
+
     document.querySelectorAll('input[type="file"][data-json-role]').forEach(input => {
       input.addEventListener('change', event => {
         const file = event.target.files[0];
@@ -477,15 +503,7 @@
         const reader = new FileReader();
         reader.onload = () => {
           try {
-            state[role] = JSON.parse(reader.result);
-            if (role === 'field_preview_playlist') {
-              state.currentFrameIndex = 0;
-              state.field_preview = null;
-            }
-            if (role === 'field_preview') {
-              state.field_preview_playlist = null;
-              state.currentFrameIndex = 0;
-            }
+            ingestLoadedJson(role, JSON.parse(reader.result));
             renderAll();
           } catch (error) {
             alert(`Could not parse ${file.name}: ${error.message}`);
@@ -651,6 +669,8 @@
         return;
       }
       renderSceneControls();
+      const schemaBadge = document.getElementById('field-preview-schema-badge');
+      if (schemaBadge) schemaBadge.textContent = state.field_preview_playlist ? 'stormdeck.field_preview_playlist.v0' : 'stormdeck.field_preview.v0';
       if (state.sceneMode === 'native-polar') drawNativePolarPreview(canvas, preview); else drawTwoPointFiveDSlabPreview(canvas, preview);
       drawPreviousFrameGhost(canvas, preview, previousFieldPreview());
       drawScanSweepOverlay(canvas, preview);
@@ -664,7 +684,7 @@
         <ul class="clean">
           <li>Field: <span class="accent">${escapeHtml(preview.field?.name)}</span> ${escapeHtml(preview.field?.units || '')}</li>
           <li>Scan: <span class="mono">${escapeHtml(display.scan_name ?? preview.source?.scan_name ?? 'unknown')}</span></li>
-          <li>Frame: <span class="mono">${state.field_preview_playlist ? `${state.currentFrameIndex + 1}/${state.field_preview_playlist.frames?.length ?? 0}` : 'single preview'}</span> • Time: <span class="mono">${escapeHtml(shortTime(display.time_coverage_start ?? preview.source?.time_coverage_start))}</span></li>
+          <li>Frame: <span class="mono">${state.field_preview_playlist ? `${state.currentFrameIndex + 1}/${state.field_preview_playlist.frames?.length ?? 0} playlist loaded` : 'single preview'}</span> • Time: <span class="mono">${escapeHtml(shortTime(display.time_coverage_start ?? preview.source?.time_coverage_start))}</span></li>
           <li>Elevation: <span class="mono">${escapeHtml(display.fixed_angle_label ?? 'unknown')}</span> • Sweep: <span class="mono">${escapeHtml(preview.sweep?.name)}</span></li>
           <li>Elevation span: <span class="mono">${fmtNumber(display.elevation_min_deg, 1, '°')}–${fmtNumber(display.elevation_max_deg, 1, '°')}</span> • median <span class="mono">${fmtNumber(display.elevation_median_deg, 1, '°')}</span> • strategy precision 0.1° • ~ means rounded/jittered</li>
           <li>Radials: ${fmt(display.radial_count ?? preview.sweep?.ray_count)} • Samples: ${fmt(sampling.sampled_ray_count)} rays × ${fmt(sampling.sampled_gate_count)} gates from ${fmt(preview.sweep?.ray_count)} × ${fmt(preview.sweep?.gate_count)}</li>
@@ -1043,14 +1063,16 @@
         toggle.textContent = state.animationPlaying ? 'Pause sweep' : 'Play sweep';
         toggle.classList.toggle('active', state.animationPlaying);
       }
+      const frameMax = Math.max(0, (state.field_preview_playlist?.frames?.length ?? 1) - 1);
       const playback = document.getElementById('frame-playback-toggle');
       if (playback) {
         playback.textContent = state.framePlaybackPlaying ? 'Pause frames' : 'Play frames';
         playback.classList.toggle('active', state.framePlaybackPlaying);
+        playback.disabled = frameMax < 1;
+        playback.title = frameMax < 1 ? 'Load field_preview_playlist.json to enable frame playback' : 'Play exported observed frames';
       }
       const scrubber = document.getElementById('frame-scrubber');
       if (scrubber) {
-        const frameMax = Math.max(0, (state.field_preview_playlist?.frames?.length ?? 1) - 1);
         scrubber.max = String(frameMax);
         scrubber.value = String(Math.max(0, Math.min(frameMax, Number(state.currentFrameIndex) || 0)));
         scrubber.disabled = frameMax === 0;
