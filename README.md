@@ -80,6 +80,20 @@ python3 scripts/stormdeck_change_summary.py \
 
 The change-summary exporter does not read radar arrays or compute reflectivity/velocity deltas. It reports same-track comparison windows, elapsed time, cadence status, and nearby quarantine events so the replay UI can show an honest first “what changed” panel.
 
+Open the metadata replay cockpit scaffold:
+
+```bash
+python3 -m http.server 8765
+```
+
+Then open:
+
+```text
+http://localhost:8765/viewer/index.html
+```
+
+Load `case_timeline.json`, `temporal_tracks.json`, and `change_summary.json` with the file pickers. The viewer intentionally displays observed metadata, pairing rules, scan age, provenance, confidence, uncertainty, warnings, temporal tracks, and the quarantine/debug lane; it does not render radar arrays yet.
+
 Or scan a CfRadial directory directly on `wea-fs`:
 
 ```bash

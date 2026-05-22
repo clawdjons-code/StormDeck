@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>StormDeck Replay Cockpit</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #08090a;
+      --panel: #0f1011;
+      --surface: rgba(255, 255, 255, 0.035);
+      --surface-strong: rgba(255, 255, 255, 0.06);
+      --border: rgba(255, 255, 255, 0.08);
+      --border-soft: rgba(255, 255, 255, 0.05);
+      --text: #f7f8f8;
+      --muted: #8a8f98;
+      --dim: #62666d;
+      --silver: #d0d6e0;
+      --accent: #7170ff;
+      --accent-bg: #5e6ad2;
+      --green: #10b981;
+      --yellow: #f5c451;
+      --red: #ff6b6b;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 20% 0%, rgba(113, 112, 255, 0.16), transparent 32rem),
+        radial-gradient(circle at 85% 10%, rgba(16, 185, 129, 0.08), transparent 26rem),
+        var(--bg);
+      font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+      font-feature-settings: "cv01", "ss03";
+    }
+
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      align-items: center;
+      padding: 18px 28px;
+      background: rgba(8, 9, 10, 0.86);
+      backdrop-filter: blur(18px);
+      border-bottom: 1px solid var(--border-soft);
+    }
+
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .mark {
+      width: 34px; height: 34px; border-radius: 10px;
+      display: grid; place-items: center;
+      background: linear-gradient(135deg, var(--accent-bg), #22243a);
+      box-shadow: inset 0 0 14px rgba(255,255,255,.12), 0 0 26px rgba(113,112,255,.22);
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-weight: 500;
+    }
+    h1 { margin: 0; font-size: 18px; font-weight: 590; letter-spacing: -0.24px; }
+    .subtitle { color: var(--muted); font-size: 12px; margin-top: 2px; }
+
+    .source-strip { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+    .pill {
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 7px 10px;
+      color: var(--silver);
+      background: rgba(255,255,255,.025);
+      font-size: 12px;
+      font-weight: 510;
+    }
+    .pill.good { color: #b8f7d6; border-color: rgba(16,185,129,.35); }
+    .pill.warn { color: #ffe0a3; border-color: rgba(245,196,81,.35); }
+
+    main { max-width: 1460px; margin: 0 auto; padding: 28px; }
+    .hero {
+      display: grid;
+      grid-template-columns: 1.2fr .8fr;
+      gap: 18px;
+      align-items: stretch;
+      margin-bottom: 18px;
+    }
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 18px;
+      box-shadow: inset 0 0 16px rgba(0,0,0,.18);
+    }
+    .hero h2 {
+      margin: 0 0 10px;
+      font-size: clamp(30px, 4.4vw, 58px);
+      line-height: 1;
+      letter-spacing: -1.05px;
+      font-weight: 510;
+    }
+    .hero p { color: var(--muted); line-height: 1.6; max-width: 820px; }
+
+    .file-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    label.file-card {
+      display: block;
+      border: 1px dashed var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      background: rgba(255,255,255,.02);
+      cursor: pointer;
+    }
+    label.file-card:hover { background: rgba(255,255,255,.05); }
+    .file-card span { display: block; font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+    input[type="file"] { width: 100%; color: var(--silver); font-size: 12px; }
+
+    .grid { display: grid; grid-template-columns: 360px 1fr 420px; gap: 18px; align-items: start; }
+    .section-title { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 12px; }
+    h3 { margin: 0; font-size: 15px; font-weight: 590; color: var(--text); }
+    .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; color: var(--dim); }
+
+    .metric-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .metric {
+      border: 1px solid var(--border-soft);
+      background: rgba(255,255,255,.025);
+      border-radius: 12px;
+      padding: 12px;
+    }
+    .metric .value { font-size: 24px; font-weight: 590; letter-spacing: -0.5px; }
+    .metric .label { color: var(--muted); font-size: 12px; margin-top: 4px; }
+
+    .track-list { display: flex; flex-direction: column; gap: 10px; }
+    .track {
+      padding: 13px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: rgba(255,255,255,.025);
+    }
+    .track.selected { outline: 1px solid var(--accent); background: rgba(113,112,255,.08); }
+    .track button {
+      all: unset;
+      width: 100%;
+      cursor: pointer;
+    }
+    .track-title { color: var(--text); font-size: 13px; font-weight: 590; overflow-wrap: anywhere; }
+    .track-meta { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 9px; color: var(--muted); font-size: 12px; }
+
+    .change-card {
+      border: 1px solid rgba(113,112,255,.28);
+      background: linear-gradient(180deg, rgba(113,112,255,.12), rgba(255,255,255,.025));
+      border-radius: 14px;
+      padding: 14px;
+      margin-bottom: 12px;
+    }
+    .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 99px; background: var(--green); margin-right: 6px; }
+    .status-dot.warn { background: var(--yellow); }
+
+    ul.clean { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+    ul.clean li { padding: 10px; border: 1px solid var(--border-soft); border-radius: 10px; color: var(--silver); background: rgba(255,255,255,.018); }
+
+    .quarantine-row { font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+    .danger { color: #ffb4b4; }
+    .muted { color: var(--muted); }
+    .accent { color: #bebeff; }
+    footer { color: var(--dim); padding: 22px 0 4px; font-size: 12px; }
+
+    @media (max-width: 1100px) {
+      .hero, .grid { grid-template-columns: 1fr; }
+      .file-grid { grid-template-columns: 1fr; }
+      header { align-items: flex-start; flex-direction: column; }
+      .source-strip { justify-content: flex-start; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <div class="mark">SD</div>
+      <div>
+        <h1>StormDeck Replay Cockpit</h1>
+        <div class="subtitle">Observed metadata only • stormdeck.case_timeline.v0 • stormdeck.temporal_tracks.v0 • stormdeck.change_summary.v0</div>
+      </div>
+    </div>
+    <div id="source-status" class="source-strip" aria-live="polite">
+      <span class="pill warn">Awaiting exports</span>
+      <span class="pill">data source: local JSON</span>
+      <span class="pill">confidence: metadata-safe</span>
+      <span class="pill">uncertainty: no radar field deltas</span>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="panel">
+        <h2>Replay truth before radar theater.</h2>
+        <p>This scaffold loads the metadata exports from <span class="mono">wea-fs</span> and turns them into an operational cockpit shell: timeline summary, comparable tracks, quarantine/debug lane, warnings, provenance, scan age, and a first “what changed” panel. Radar field deltas not computed. No fake 3D. Refreshingly unglamorous.</p>
+        <div class="source-strip">
+          <span class="pill good">Compare only within the same track</span>
+          <span class="pill">Native RHI is first-class</span>
+          <span class="pill">Quarantined transition fragments hidden from comparisons</span>
+        </div>
+      </div>
+      <div id="provenance" class="panel">
+        <div class="section-title"><h3>Load exports</h3><span class="mono">JSON</span></div>
+        <div class="file-grid">
+          <label class="file-card"><span>case_timeline.json</span><input type="file" accept="application/json,.json" data-json-role="case_timeline"></label>
+          <label class="file-card"><span>temporal_tracks.json</span><input type="file" accept="application/json,.json" data-json-role="temporal_tracks"></label>
+          <label class="file-card"><span>change_summary.json</span><input type="file" accept="application/json,.json" data-json-role="change_summary"></label>
+        </div>
+        <p class="muted">Expected path shape: <span class="mono">/data/stormdeck/exports/20260402_031550/*.json</span>. Browser security requires selecting local files or serving this viewer from the export directory.</p>
+      </div>
+    </section>
+
+    <section class="grid">
+      <aside class="panel" id="case-summary">
+        <div class="section-title"><h3>Case timeline</h3><span class="mono">case_timeline</span></div>
+        <div class="metric-grid" id="case-metrics">
+          <div class="metric"><div class="value">—</div><div class="label">volumes</div></div>
+          <div class="metric"><div class="value">—</div><div class="label">median cadence</div></div>
+          <div class="metric"><div class="value">—</div><div class="label">start</div></div>
+          <div class="metric"><div class="value">—</div><div class="label">end</div></div>
+        </div>
+        <div id="warnings" style="margin-top:14px;">
+          <div class="section-title"><h3>Warnings and caveats</h3><span class="mono">visible by design</span></div>
+          <ul class="clean"><li>Load exports to surface case warnings. Radar field deltas not computed.</li></ul>
+        </div>
+      </aside>
+
+      <section class="panel">
+        <div class="section-title"><h3>Temporal tracks</h3><span class="mono">replay lanes</span></div>
+        <div id="track-list" class="track-list">
+          <div class="track"><div class="track-title">Load temporal_tracks.json</div><div class="track-meta"><span>Comparable lanes will appear here.</span></div></div>
+        </div>
+      </section>
+
+      <aside class="panel">
+        <div class="section-title"><h3>What changed?</h3><span class="mono">metadata-safe</span></div>
+        <div id="change-panel">
+          <div class="change-card">
+            <div><span class="status-dot warn"></span>No change_summary.json loaded.</div>
+            <p class="muted">The first panel reports elapsed time, cadence status, scan age, data source, confidence, uncertainty, and quarantine events. Radar field deltas not computed.</p>
+          </div>
+        </div>
+        <div id="quarantine-lane" style="margin-top:16px;">
+          <div class="section-title"><h3>Quarantined transition fragments</h3><span class="mono">debug lane</span></div>
+          <ul class="clean"><li class="quarantine-row">Load temporal_tracks.json to inspect fragments excluded from replay comparisons.</li></ul>
+        </div>
+      </aside>
+    </section>
+
+    <footer>StormDeck metadata cockpit scaffold • observed data and inferred classifications are intentionally separated • operational clarity over cinematic effects.</footer>
+  </main>
+
+  <script>
+    const state = { case_timeline: null, temporal_tracks: null, change_summary: null, selectedTrackId: null };
+
+    document.querySelectorAll('input[type="file"][data-json-role]').forEach(input => {
+      input.addEventListener('change', event => {
+        const file = event.target.files[0];
+        if (!file) return;
+        const role = event.target.dataset.jsonRole;
+        const reader = new FileReader();
+        reader.onload = () => {
+          try {
+            state[role] = JSON.parse(reader.result);
+            renderAll();
+          } catch (error) {
+            alert(`Could not parse ${file.name}: ${error.message}`);
+          }
+        };
+        reader.readAsText(file);
+      });
+    });
+
+    function fmt(value, suffix = '') {
+      if (value === null || value === undefined || value === '') return '—';
+      return `${value}${suffix}`;
+    }
+
+    function shortTime(value) {
+      if (!value) return '—';
+      return String(value).replace('2026-04-02 ', '');
+    }
+
+    function renderAll() {
+      renderSourceStatus();
+      renderCaseSummary();
+      renderTrackList();
+      renderChangePanel();
+      renderQuarantineLane();
+    }
+
+    function renderSourceStatus() {
+      const loaded = Object.entries(state).filter(([, value]) => value).map(([key]) => key);
+      const status = document.getElementById('source-status');
+      status.innerHTML = `
+        <span class="pill ${loaded.length === 3 ? 'good' : 'warn'}">${loaded.length}/3 exports loaded</span>
+        <span class="pill">data source: local JSON</span>
+        <span class="pill">confidence: metadata-safe</span>
+        <span class="pill">uncertainty: radar arrays not read</span>
+      `;
+    }
+
+    function renderCaseSummary() {
+      const caseData = state.case_timeline;
+      const tracks = state.temporal_tracks;
+      const target = document.getElementById('case-metrics');
+      const warnings = document.getElementById('warnings');
+      const volumeCount = caseData?.volume_count ?? tracks?.volume_counts?.total;
+      const cadence = caseData?.median_volume_start_spacing_s ?? tracks?.tracks?.[0]?.median_spacing_s;
+      const start = caseData?.case_start_time ?? tracks?.tracks?.[0]?.case_start_time;
+      const end = caseData?.case_end_time ?? tracks?.tracks?.[0]?.case_end_time;
+      target.innerHTML = `
+        <div class="metric"><div class="value">${fmt(volumeCount)}</div><div class="label">volumes</div></div>
+        <div class="metric"><div class="value">${fmt(cadence, 's')}</div><div class="label">median cadence</div></div>
+        <div class="metric"><div class="value mono">${shortTime(start)}</div><div class="label">case start</div></div>
+        <div class="metric"><div class="value mono">${shortTime(end)}</div><div class="label">case end</div></div>
+      `;
+      const warningList = [
+        ...(caseData?.warnings ?? []),
+        ...(tracks?.warnings ?? []),
+        ...(state.change_summary?.warnings ?? []),
+      ];
+      warnings.innerHTML = `
+        <div class="section-title"><h3>Warnings and caveats</h3><span class="mono">visible by design</span></div>
+        <ul class="clean">${(warningList.length ? warningList : ['Load exports to surface case warnings. Radar field deltas not computed.']).map(w => `<li>${escapeHtml(w)}</li>`).join('')}</ul>
+      `;
+    }
+
+    function renderTrackList() {
+      const list = document.getElementById('track-list');
+      const tracks = state.temporal_tracks?.tracks ?? [];
+      if (!tracks.length) {
+        list.innerHTML = '<div class="track"><div class="track-title">Load temporal_tracks.json</div><div class="track-meta"><span>Comparable lanes will appear here.</span></div></div>';
+        return;
+      }
+      if (!state.selectedTrackId) state.selectedTrackId = tracks[0].track_id;
+      list.innerHTML = tracks.map(track => {
+        const nativeLabel = track.native_rhi ? 'Native RHI' : `${fmt(track.fixed_angle_deg)}° ${track.scan_mode}`;
+        return `<div class="track ${track.track_id === state.selectedTrackId ? 'selected' : ''}">
+          <button onclick="selectTrack('${escapeAttr(track.track_id)}')">
+            <div class="track-title">${escapeHtml(track.track_id)}</div>
+            <div class="track-meta">
+              <span>${escapeHtml(nativeLabel)}</span>
+              <span>${fmt(track.volume_count)} volumes</span>
+              <span>scan age cadence ${fmt(track.median_spacing_s, 's')}</span>
+            </div>
+          </button>
+        </div>`;
+      }).join('');
+    }
+
+    function selectTrack(trackId) {
+      state.selectedTrackId = trackId;
+      renderTrackList();
+      renderChangePanel();
+    }
+
+    function renderChangePanel() {
+      const panel = document.getElementById('change-panel');
+      const changes = state.change_summary?.track_changes ?? [];
+      const selected = changes.find(change => change.track_id === state.selectedTrackId) ?? changes[0];
+      if (!selected) {
+        panel.innerHTML = `<div class="change-card"><div><span class="status-dot warn"></span>No change_summary.json loaded.</div><p class="muted">Radar field deltas not computed. Load the summary to display same-track comparisons.</p></div>`;
+        return;
+      }
+      const ok = selected.cadence_status === 'on_cadence';
+      panel.innerHTML = `
+        <div class="change-card">
+          <div><span class="status-dot ${ok ? '' : 'warn'}"></span>${escapeHtml(selected.cadence_status ?? selected.reason ?? 'unknown')}</div>
+          <p class="muted">${escapeHtml(selected.operator_message || 'Metadata-safe comparison only.')}</p>
+          <div class="metric-grid">
+            <div class="metric"><div class="value">${fmt(selected.elapsed_s, 's')}</div><div class="label">elapsed</div></div>
+            <div class="metric"><div class="value">${fmt(selected.quarantine_events_between)}</div><div class="label">quarantine events</div></div>
+            <div class="metric"><div class="value mono">${fmt(selected.from_ordinal)}</div><div class="label">from ordinal</div></div>
+            <div class="metric"><div class="value mono">${fmt(selected.to_ordinal)}</div><div class="label">to ordinal</div></div>
+          </div>
+        </div>
+        <ul class="clean">
+          <li>Track: <span class="accent">${escapeHtml(selected.track_id)}</span></li>
+          <li>Scan age: latest comparable frame started at <span class="mono">${escapeHtml(shortTime(selected.to_start_time))}</span>.</li>
+          <li>Data source: temporal_tracks.json and change_summary.json. Confidence: metadata-safe. Uncertainty: radar field values not inspected.</li>
+        </ul>
+      `;
+    }
+
+    function renderQuarantineLane() {
+      const lane = document.getElementById('quarantine-lane');
+      const events = state.temporal_tracks?.quarantine ?? [];
+      lane.innerHTML = `
+        <div class="section-title"><h3>Quarantined transition fragments</h3><span class="mono">${events.length} events</span></div>
+        <ul class="clean">
+          ${(events.length ? events : [{file:'No fragments loaded', reason:'Load temporal_tracks.json'}]).slice(0, 24).map(event => `
+            <li class="quarantine-row"><span class="danger">${escapeHtml(event.reason || 'unknown')}</span><br>${escapeHtml((event.file || '').split('/').pop())}<br><span class="mono">${escapeHtml(event.start_time || '')}</span></li>
+          `).join('')}
+        </ul>
+      `;
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>'"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));
+    }
+    function escapeAttr(value) { return escapeHtml(value).replace(/`/g, '&#96;'); }
+  </script>
+</body>
+</html>
