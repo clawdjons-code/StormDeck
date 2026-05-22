@@ -52,6 +52,10 @@ def test_builds_browser_safe_observed_gate_preview_contract():
     assert preview["coordinates"]["range_m"] == [1000.0, 3000.0]
     assert preview["values"] == [[5.0, None], [None, 40.0]]
     assert preview["viewer_hints"]["default_view"] == "native_polar_sweep"
+    assert preview["viewer_hints"]["color_table"] == "atd_reflectivity_dbz"
+    assert preview["display_metadata"]["scan_name"] is None
+    assert preview["display_metadata"]["radial_count"] == 3
+    assert preview["display_metadata"]["fixed_angle_label"] == "0.5°"
     assert preview["warnings"] == [
         "Observed radar field sample only; not a gridded volume and not a field-value delta."
     ]

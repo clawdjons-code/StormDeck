@@ -77,7 +77,7 @@
     .pill.good { color: #b8f7d6; border-color: rgba(16,185,129,.35); }
     .pill.warn { color: #ffe0a3; border-color: rgba(245,196,81,.35); }
 
-    main { max-width: 1460px; margin: 0 auto; padding: 28px; }
+    main { max-width: 1600px; margin: 0 auto; padding: 28px; }
     .hero {
       display: grid;
       grid-template-columns: 1.2fr .8fr;
@@ -91,7 +91,9 @@
       border-radius: 16px;
       padding: 18px;
       box-shadow: inset 0 0 16px rgba(0,0,0,.18);
+      min-width: 0;
     }
+    .panel, .track, .metric, ul.clean li { overflow-wrap: anywhere; word-break: break-word; }
     .hero h2 {
       margin: 0 0 10px;
       font-size: clamp(30px, 4.4vw, 58px);
@@ -114,7 +116,7 @@
     .file-card span { display: block; font-size: 12px; color: var(--muted); margin-bottom: 8px; }
     input[type="file"] { width: 100%; color: var(--silver); font-size: 12px; }
 
-    .grid { display: grid; grid-template-columns: 360px 1fr 420px; gap: 18px; align-items: start; }
+    .grid { display: grid; grid-template-columns: 360px minmax(0, 1fr) 420px; gap: 18px; align-items: start; }
     .section-title { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 12px; }
     h3 { margin: 0; font-size: 15px; font-weight: 590; color: var(--text); }
     .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; color: var(--dim); }
@@ -159,13 +161,20 @@
     ul.clean li { padding: 10px; border: 1px solid var(--border-soft); border-radius: 10px; color: var(--silver); background: rgba(255,255,255,.018); }
 
     .quarantine-row { font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
-    .field-preview-grid { display: grid; grid-template-columns: minmax(320px, 1fr) 360px; gap: 16px; align-items: stretch; }
+    .field-preview-grid { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 16px; align-items: stretch; }
     .radar-canvas-wrap { min-height: 420px; border: 1px solid var(--border-soft); border-radius: 14px; background: rgba(0,0,0,.22); display: grid; place-items: center; overflow: hidden; }
     #field-preview-canvas { width: 100%; max-width: 620px; aspect-ratio: 1 / 1; }
+    #field-preview-legend { margin-top: 12px; }
+    .legend-row { display: grid; grid-template-columns: 46px 1fr; gap: 8px; align-items: center; color: var(--muted); font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11px; }
+    .legend-swatch { height: 8px; border-radius: 99px; border: 1px solid rgba(255,255,255,.18); }
     .danger { color: #ffb4b4; }
     .muted { color: var(--muted); }
     .accent { color: #bebeff; }
     footer { color: var(--dim); padding: 22px 0 4px; font-size: 12px; }
+
+    @media (max-width: 1280px) {
+      .field-preview-grid { grid-template-columns: 1fr; }
+    }
 
     @media (max-width: 1100px) {
       .hero, .grid, .field-preview-grid { grid-template-columns: 1fr; }
@@ -265,6 +274,7 @@
               <li>Not a gridded volume. Not 3D. Not a field-value delta.</li>
             </ul>
           </div>
+          <div id="field-preview-legend" aria-label="dBZ reflectivity legend"></div>
         </div>
       </div>
     </section>
@@ -274,6 +284,21 @@
 
   <script>
     const state = { case_timeline: null, temporal_tracks: null, change_summary: null, field_preview: null, selectedTrackId: null };
+    const ATD_REFLECTIVITY_STOPS = [
+      { value: 90, color: '#050505' },
+      { value: 80, color: '#00e5ff' },
+      { value: 70, color: '#c026d3' },
+      { value: 60, color: '#ffffff' },
+      { value: 50, color: '#dc2626' },
+      { value: 40, color: '#f97316' },
+      { value: 30, color: '#fde047' },
+      { value: 20, color: '#22c55e' },
+      { value: 10, color: '#166534' },
+      { value: 0, color: '#60a5fa' },
+      { value: -10, color: '#64748b' },
+      { value: -20, color: '#7c3aed' },
+      { value: -30, color: '#1f102f' },
+    ];
 
     document.querySelectorAll('input[type="file"][data-json-role]').forEach(input => {
       input.addEventListener('change', event => {
@@ -422,6 +447,7 @@
     function renderFieldPreview() {
       const preview = state.field_preview;
       const summary = document.getElementById('field-preview-summary');
+      const legend = document.getElementById('field-preview-legend');
       const canvas = document.getElementById('field-preview-canvas');
       if (!preview) {
         clearCanvas(canvas, 'Load field_preview.json');
@@ -430,16 +456,21 @@
             <li>Load field_preview.json to draw a native polar sweep of observed gates.</li>
             <li>Not a gridded volume. Not 3D. Not a field-value delta.</li>
           </ul>`;
+        legend.innerHTML = '';
         return;
       }
       drawNativePolarPreview(canvas, preview);
+      renderFieldLegend(preview);
       const stats = preview.field?.stats ?? {};
       const sampling = preview.sampling ?? {};
+      const display = preview.display_metadata ?? {};
       summary.innerHTML = `
         <ul class="clean">
           <li>Field: <span class="accent">${escapeHtml(preview.field?.name)}</span> ${escapeHtml(preview.field?.units || '')}</li>
-          <li>Sweep: <span class="mono">${escapeHtml(preview.sweep?.name)}</span> • native polar sweep • observed gates</li>
-          <li>Samples: ${fmt(sampling.sampled_ray_count)} rays × ${fmt(sampling.sampled_gate_count)} gates from ${fmt(preview.sweep?.ray_count)} × ${fmt(preview.sweep?.gate_count)}</li>
+          <li>Scan: <span class="mono">${escapeHtml(display.scan_name ?? preview.source?.scan_name ?? 'unknown')}</span></li>
+          <li>Time: <span class="mono">${escapeHtml(shortTime(display.time_coverage_start ?? preview.source?.time_coverage_start))}</span></li>
+          <li>Elevation: <span class="mono">${escapeHtml(display.fixed_angle_label ?? 'unknown')}</span> • Sweep: <span class="mono">${escapeHtml(preview.sweep?.name)}</span></li>
+          <li>Radials: ${fmt(display.radial_count ?? preview.sweep?.ray_count)} • Samples: ${fmt(sampling.sampled_ray_count)} rays × ${fmt(sampling.sampled_gate_count)} gates from ${fmt(preview.sweep?.ray_count)} × ${fmt(preview.sweep?.gate_count)}</li>
           <li>Range: ${fmt(stats.min)} to ${fmt(stats.max)} • valid gates ${fmt(stats.valid_gate_count)} • missing gates ${fmt(stats.missing_gate_count)}</li>
           <li>Data source: ${escapeHtml(preview.source?.path)}. Confidence: observed radar field sample. Uncertainty: sampled arrays only; not a gridded volume, not 3D, and not a field-value delta.</li>
           ${(preview.warnings ?? []).map(w => `<li>${escapeHtml(w)}</li>`).join('')}
@@ -511,15 +542,38 @@
     }
 
     function colorForField(fieldName, value, vmin, vmax) {
-      if (['REF', 'DBZ', 'ZH'].includes(fieldName)) {
-        const stops = [[0, '#1d4ed8'], [20, '#22c55e'], [35, '#fde047'], [50, '#ef4444'], [65, '#e879f9']];
-        return colorRamp(value, stops);
+      if (['REF', 'DBZ', 'DZ', 'ZH'].includes(fieldName)) {
+        return atdReflectivityColor(value);
       }
       const t = Math.max(0, Math.min(1, (value - vmin) / Math.max(0.001, vmax - vmin)));
       const r = Math.round(60 + 180 * t);
       const g = Math.round(100 + 80 * (1 - Math.abs(t - 0.5) * 2));
       const b = Math.round(220 - 160 * t);
       return `rgb(${r},${g},${b})`;
+    }
+
+    function atdReflectivityColor(value) {
+      const stops = [...ATD_REFLECTIVITY_STOPS].sort((a, b) => a.value - b.value);
+      if (value <= stops[0].value) return stops[0].color;
+      for (let i = 0; i < stops.length - 1; i++) {
+        if (value <= stops[i + 1].value) return stops[i].color;
+      }
+      return stops[stops.length - 1].color;
+    }
+
+    function renderFieldLegend(preview) {
+      const legend = document.getElementById('field-preview-legend');
+      const fieldName = String(preview.field?.name ?? '').toUpperCase();
+      if (!['REF', 'DBZ', 'DZ', 'ZH'].includes(fieldName)) {
+        legend.innerHTML = '<div class="mono">generic field color scale</div>';
+        return;
+      }
+      legend.innerHTML = `
+        <div class="section-title"><h3>dBZ</h3><span class="mono">ATD-style reflectivity</span></div>
+        ${ATD_REFLECTIVITY_STOPS.map(stop => `
+          <div class="legend-row"><span>${stop.value}</span><span class="legend-swatch" style="background:${stop.color}"></span></div>
+        `).join('')}
+      `;
     }
 
     function colorRamp(value, stops) {

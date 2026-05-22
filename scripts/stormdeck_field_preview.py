@@ -167,6 +167,11 @@ def build_field_preview_from_arrays(
     sampled_az = _sample_axis(az, ray_stride)
     sampled_el = _sample_axis(el, ray_stride)
     sampled_ranges = _sample_axis(ranges, gate_stride)
+    el_span = float(np.nanmax(el) - np.nanmin(el)) if el.size else float("nan")
+    az_span = float(np.nanmax(az) - np.nanmin(az)) if az.size else float("nan")
+    fixed_angle = float(np.nanmedian(el)) if math.isfinite(el_span) and el_span <= 0.1 else float(np.nanmedian(az)) if az.size else float("nan")
+    fixed_angle_label = f"{fixed_angle:.1f}°" if math.isfinite(fixed_angle) else None
+    reflectivity_like = field_name.upper() in ("REF", "DBZ", "DZ", "ZH")
 
     return {
         "schema": "stormdeck.field_preview.v0",
@@ -177,6 +182,14 @@ def build_field_preview_from_arrays(
             "format": "CfRadial NetCDF sweep group or equivalent extracted arrays",
             "time_coverage_start": source_time,
             "scan_name": scan_name,
+        },
+        "display_metadata": {
+            "scan_name": scan_name,
+            "time_coverage_start": source_time,
+            "radial_count": int(ray_count),
+            "fixed_angle_label": fixed_angle_label,
+            "azimuth_span_deg": json_safe(az_span),
+            "elevation_span_deg": json_safe(el_span),
         },
         "sweep": {
             "name": sweep_name,
@@ -209,7 +222,7 @@ def build_field_preview_from_arrays(
         "values": _json_value_matrix(sampled),
         "viewer_hints": {
             "default_view": "native_polar_sweep",
-            "color_table": "reflectivity" if field_name.upper() in ("REF", "DBZ", "ZH") else "generic_diverging_or_linear",
+            "color_table": "atd_reflectivity_dbz" if reflectivity_like else "generic_diverging_or_linear",
             "observed_vs_inferred_label": "observed gates",
         },
         "warnings": [VALUE_WARNING],

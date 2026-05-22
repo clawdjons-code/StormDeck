@@ -68,7 +68,29 @@ def test_viewer_surfaces_observed_radar_field_preview_without_claiming_3d():
     assert "stormdeck.field_preview.v0" in html
     assert 'id="field-preview"' in html
     assert 'id="field-preview-canvas"' in html
+    assert 'id="field-preview-legend"' in html
     assert "Observed radar field sample" in html
     assert "native polar sweep" in html
     assert "not a gridded volume" in html
     assert "drawNativePolarPreview" in html
+    assert "renderFieldLegend" in html
+
+
+def test_viewer_uses_atd_reflectivity_palette_and_compact_metadata():
+    html = VIEWER.read_text(encoding="utf-8")
+
+    assert "ATD_REFLECTIVITY_STOPS" in html
+    for tick in ["90", "80", "70", "60", "50", "40", "30", "20", "10", "0", "-10", "-20", "-30"]:
+        assert f"value: {tick}" in html
+    for phrase in ["Scan:", "Radials:", "Elevation:", "Time:"]:
+        assert phrase in html
+
+
+def test_viewer_layout_prevents_long_labels_from_jumping_tracks():
+    html = VIEWER.read_text(encoding="utf-8")
+
+    assert "minmax(0, 1fr)" in html
+    assert ".panel, .track, .metric, ul.clean li" in html
+    assert "overflow-wrap: anywhere" in html
+    assert "word-break: break-word" in html
+    assert "@media (max-width: 1280px)" in html
