@@ -105,17 +105,21 @@ http://localhost:8765/viewer/index.html
 
 Load `case_timeline.json`, `temporal_tracks.json`, and `change_summary.json` with the file pickers. Optionally load `field_preview.json` to draw a sampled native polar sweep of observed gates. When the CfRadial file includes radar site latitude and longitude, the viewer also draws a radar site marker and sector outline for geographic context. Optionally load `map_overlays.json` (`stormdeck.map_overlays.v0`) to add towns, state/county boundary linework, and warning corridor polygons as context overlays on the orientation sketch only. The map-context sidebar reports stacked overlay counts for towns, warning corridors, county boundaries, and state boundaries, plus a small legend showing their symbol colors. The faint sketch grid is only a visual guide; radar gates are deliberately not gridded or map-projected. The viewer intentionally displays observed metadata, pairing rules, scan age, provenance, confidence, uncertainty, warnings, temporal tracks, and the quarantine/debug lane; the optional field preview is not a gridded volume, not 3D, and not a radar field delta.
 
-`map_overlays.json` is optional context data; the radar exporter does not create it yet. To test the layer immediately, load the committed sample file:
+`map_overlays.json` is optional context data; the radar exporter does not create it directly. To test the layer immediately, load the committed sample file:
 
 ```text
 examples/map_overlays.sample.json
 ```
 
-Or copy it into your export directory as:
+For a repeatable case setup, generate `map_overlays.json` from the sample config:
 
 ```bash
-cp examples/map_overlays.sample.json /data/stormdeck/exports/20260402_031550/map_overlays.json
+python3 scripts/stormdeck_map_overlays.py \
+  --config examples/map_overlay_config.sample.json \
+  --out /data/stormdeck/exports/20260402_031550/map_overlays.json
 ```
+
+The generator reads `stormdeck.map_overlay_config.v0`, passes through towns and warning corridors, marks demo/manual corridors as schematic context unless `active_product` is true, and leaves county/state boundaries empty unless optional GeoJSON paths are provided in `boundary_sources`.
 
 Minimal `map_overlays.json` shape:
 

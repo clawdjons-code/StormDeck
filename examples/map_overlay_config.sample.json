@@ -1,0 +1,28 @@
+{
+  "schema": "stormdeck.map_overlay_config.v0",
+  "site": "KATD",
+  "description": "Sample KATD map context config for generating stormdeck.map_overlays.v0.",
+  "towns": [
+    { "name": "Norman", "latitude_deg": 35.2226, "longitude_deg": -97.4395, "label_priority": 1 },
+    { "name": "Moore", "latitude_deg": 35.3395, "longitude_deg": -97.4867, "label_priority": 2 },
+    { "name": "Newcastle", "latitude_deg": 35.2473, "longitude_deg": -97.5998, "label_priority": 3 }
+  ],
+  "warning_corridors": [
+    {
+      "id": "demo-warning-corridor",
+      "label": "demo warning corridor",
+      "source": "manual-demo",
+      "active_product": false,
+      "points": [
+        { "latitude_deg": 35.05, "longitude_deg": -98.05 },
+        { "latitude_deg": 35.36, "longitude_deg": -98.02 },
+        { "latitude_deg": 35.42, "longitude_deg": -97.55 },
+        { "latitude_deg": 35.10, "longitude_deg": -97.58 }
+      ]
+    }
+  ],
+  "boundary_sources": {
+    "county_geojson": null,
+    "state_geojson": null
+  }
+}
