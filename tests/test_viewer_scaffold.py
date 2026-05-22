@@ -115,6 +115,18 @@ def test_viewer_adds_non_gridded_map_context_for_native_sector():
     assert "radar site marker" in html
 
 
+def test_viewer_map_context_has_orientation_and_range_sketch_labels():
+    html = VIEWER.read_text(encoding="utf-8")
+
+    assert "drawOrientationCompass" in html
+    assert "drawRangeRings" in html
+    assert "labelSectorBoundary" in html
+    assert "orientation sketch only" in html
+    assert "range rings" in html
+    for label in ["'N'", "'E'", "'S'", "'W'"]:
+        assert label in html
+
+
 def test_viewer_layout_prevents_long_labels_from_jumping_tracks():
     html = VIEWER.read_text(encoding="utf-8")
 

@@ -540,6 +540,63 @@
       ctx.fillText(label, 24, 36);
     }
 
+    function drawOrientationCompass(ctx, cx, cy, radius) {
+      ctx.save();
+      ctx.fillStyle = '#8a8f98';
+      ctx.font = '11px JetBrains Mono, monospace';
+      const labels = [
+        ['N', cx, cy - radius - 12],
+        ['E', cx + radius + 12, cy + 4],
+        ['S', cx, cy + radius + 20],
+        ['W', cx - radius - 18, cy + 4],
+      ];
+      labels.forEach(([label, x, y]) => ctx.fillText(label, x, y));
+      ctx.strokeStyle = 'rgba(247, 248, 248, 0.66)';
+      ctx.fillStyle = 'rgba(247, 248, 248, 0.84)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - radius + 28);
+      ctx.lineTo(cx, cy - radius + 8);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - radius + 4);
+      ctx.lineTo(cx - 4, cy - radius + 14);
+      ctx.lineTo(cx + 4, cy - radius + 14);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawRangeRings(ctx, cx, cy, radius, rangeMaxM) {
+      const maxKm = Math.max(1, Number(rangeMaxM ?? 0) / 1000);
+      const candidates = [100, 200, 300].filter(km => km < maxKm * 0.98);
+      const rings = candidates.length ? candidates : [Math.round(maxKm / 2)];
+      ctx.save();
+      ctx.strokeStyle = 'rgba(120, 140, 170, 0.30)';
+      ctx.fillStyle = '#8a8f98';
+      ctx.font = '10px JetBrains Mono, monospace';
+      rings.forEach(km => {
+        const ringRadius = radius * (km / maxKm);
+        ctx.beginPath();
+        ctx.arc(cx, cy, ringRadius, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.fillText(`${km} km`, cx + ringRadius + 4, cy - 3);
+      });
+      ctx.restore();
+    }
+
+    function labelSectorBoundary(ctx, cx, cy, radius, azimuthDeg, align = 'left') {
+      const angle = (azimuthDeg - 90) * Math.PI / 180;
+      const x = cx + Math.cos(angle) * (radius + 12);
+      const y = cy + Math.sin(angle) * (radius + 12);
+      ctx.save();
+      ctx.fillStyle = '#bebeff';
+      ctx.font = '10px JetBrains Mono, monospace';
+      ctx.textAlign = align;
+      ctx.fillText(`${fmtNumber(azimuthDeg, 1, '°')}`, x, y);
+      ctx.restore();
+    }
+
     function drawMapContext(canvas, preview) {
       const ctx = canvas.getContext('2d');
       const width = canvas.width;
@@ -575,6 +632,8 @@
       const azMax = Number(outline.azimuth_max_deg ?? preview.sweep?.azimuth_max_deg ?? azMin);
       const start = (azMin - 90) * Math.PI / 180;
       const end = (azMax - 90) * Math.PI / 180;
+      drawRangeRings(ctx, cx, cy, radius, outline.range_max_m);
+      drawOrientationCompass(ctx, cx, cy, radius);
       ctx.fillStyle = 'rgba(99, 102, 241, 0.14)';
       ctx.strokeStyle = 'rgba(190, 190, 255, 0.72)';
       ctx.lineWidth = 2;
@@ -584,6 +643,8 @@
       ctx.closePath();
       ctx.fill();
       ctx.stroke();
+      labelSectorBoundary(ctx, cx, cy, radius, azMin, 'right');
+      labelSectorBoundary(ctx, cx, cy, radius, azMax, 'left');
 
       ctx.fillStyle = '#22c55e';
       ctx.beginPath();
@@ -595,11 +656,13 @@
       ctx.fillStyle = '#8a8f98';
       ctx.font = '11px JetBrains Mono, monospace';
       ctx.fillText('sector outline only • not gridded', 18, 44);
+      ctx.fillText('orientation sketch only • range rings approximate', 18, 60);
       summary.innerHTML = `
         <ul class="clean">
           <li>Site: <span class="mono">${fmtNumber(site.latitude_deg, 3)}°, ${fmtNumber(site.longitude_deg, 3)}°</span> • altitude ${fmtNumber(site.altitude_m, 0, ' m')}</li>
           <li>Sector: <span class="mono">${fmtNumber(azMin, 1, '°')}–${fmtNumber(azMax, 1, '°')}</span> • max range ${fmtNumber((outline.range_max_m ?? 0) / 1000, 1, ' km')}</li>
           <li>Geographic context is a radar site marker plus sector outline only; not gridded and not a map-projected gate field.</li>
+          <li>Orientation sketch only: cardinal labels, boundary bearings, and range rings aid readability but are not a projected basemap.</li>
         </ul>`;
     }
 
