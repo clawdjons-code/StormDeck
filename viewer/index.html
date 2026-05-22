@@ -165,6 +165,9 @@
     .radar-canvas-wrap { min-height: 420px; border: 1px solid var(--border-soft); border-radius: 14px; background: rgba(0,0,0,.22); display: grid; place-items: center; overflow: hidden; }
     #field-preview-canvas { width: 100%; max-width: 620px; aspect-ratio: 1 / 1; }
     .map-context { margin-top: 14px; display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 12px; align-items: stretch; }
+    .focus-toggle { display: inline-flex; gap: 6px; margin: 0 0 10px; padding: 4px; border: 1px solid var(--border-soft); border-radius: 999px; background: rgba(255,255,255,.025); }
+    .focus-toggle button { border: 0; border-radius: 999px; padding: 6px 10px; color: var(--muted); background: transparent; cursor: pointer; font: inherit; font-size: 12px; }
+    .focus-toggle button.active { color: var(--text); background: rgba(113,112,255,.22); box-shadow: inset 0 0 0 1px rgba(190,190,255,.2); }
     .map-context-wrap { min-height: 220px; border: 1px solid var(--border-soft); border-radius: 14px; background: rgba(0,0,0,.22); display: grid; place-items: center; overflow: hidden; }
     #map-context-canvas { width: 100%; max-width: 420px; aspect-ratio: 4 / 3; }
     .overlay-legend { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 10px; margin-top: 8px; font-size: 11px; color: var(--muted); }
@@ -286,8 +289,14 @@
         </div>
       </div>
       <div class="map-context">
-        <div class="map-context-wrap">
-          <canvas id="map-context-canvas" width="420" height="315" aria-label="radar site marker and sector outline only"></canvas>
+        <div>
+          <div class="focus-toggle" role="group" aria-label="map focus mode">
+            <button type="button" data-map-focus-mode="full-sector">Full sector</button>
+            <button type="button" data-map-focus-mode="local-impact">Local impact</button>
+          </div>
+          <div class="map-context-wrap">
+            <canvas id="map-context-canvas" width="420" height="315" aria-label="radar site marker and sector outline only"></canvas>
+          </div>
         </div>
         <div id="map-context-summary">
           <ul class="clean">
@@ -302,7 +311,7 @@
   </main>
 
   <script>
-    const state = { case_timeline: null, temporal_tracks: null, change_summary: null, field_preview: null, map_overlays: null, selectedTrackId: null };
+    const state = { case_timeline: null, temporal_tracks: null, change_summary: null, field_preview: null, map_overlays: null, selectedTrackId: null, mapFocusMode: 'local-impact' };
     const ATD_REFLECTIVITY_STOPS = [
       { value: 90, color: '#050505' },
       { value: 80, color: '#00e5ff' },
@@ -318,6 +327,15 @@
       { value: -20, color: '#7c3aed' },
       { value: -30, color: '#1f102f' },
     ];
+
+    function setMapFocusMode(mode) {
+      state.mapFocusMode = mode === 'full-sector' ? 'full-sector' : 'local-impact';
+      renderAll();
+    }
+
+    document.querySelectorAll('[data-map-focus-mode]').forEach(button => {
+      button.addEventListener('click', () => setMapFocusMode(button.dataset.mapFocusMode));
+    });
 
     document.querySelectorAll('input[type="file"][data-json-role]').forEach(input => {
       input.addEventListener('change', event => {
@@ -626,10 +644,18 @@
       const projected = collectOverlayPoints()
         .map(point => projectLatLonToSketch(point.latitude_deg ?? point.lat, point.longitude_deg ?? point.lon, site, 1))
         .filter(point => Number.isFinite(point.x) && Number.isFinite(point.y));
-      if (!projected.length) return { rangeKm: radarRangeKm, pixelsPerKm: radius / radarRangeKm, mode: 'full-sector scale' };
+      if (!projected.length) return { rangeKm: radarRangeKm, pixelsPerKm: radius / radarRangeKm, mode: 'full radar sector scale' };
       const maxKm = Math.max(...projected.map(point => Math.hypot(point.x, point.y)), 8);
       const rangeKm = Math.min(radarRangeKm, Math.max(18, maxKm * 1.35));
-      return { rangeKm, pixelsPerKm: radius / rangeKm, mode: 'local context scale' };
+      return { rangeKm, pixelsPerKm: radius / rangeKm, mode: 'local impact scale' };
+    }
+
+    function resolveMapFocusScale(site, outline, radius) {
+      const radarRangeKm = Math.max(1, Number(outline?.range_max_m ?? 1000) / 1000);
+      if (state.mapFocusMode === 'full-sector') {
+        return { rangeKm: radarRangeKm, pixelsPerKm: radius / radarRangeKm, mode: 'full radar sector scale' };
+      }
+      return computeOverlaySketchScale(site, outline, radius);
     }
 
     function drawOverlayPolyline(ctx, points, site, cx, cy, pixelsPerKm, color, close = false) {
@@ -814,7 +840,8 @@
       const cx = width / 2;
       const cy = height / 2;
       const radius = Math.min(width, height) * 0.34;
-      const scale = computeOverlaySketchScale(site, outline, radius);
+      const scale = resolveMapFocusScale(site, outline, radius);
+      document.querySelectorAll('[data-map-focus-mode]').forEach(button => button.classList.toggle('active', button.dataset.mapFocusMode === state.mapFocusMode));
       const azMin = Number(outline.azimuth_min_deg ?? preview.sweep?.azimuth_min_deg ?? 0);
       const azMax = Number(outline.azimuth_max_deg ?? preview.sweep?.azimuth_max_deg ?? azMin);
       const start = (azMin - 90) * Math.PI / 180;
@@ -852,7 +879,7 @@
           <li>Sector: <span class="mono">${fmtNumber(azMin, 1, '°')}–${fmtNumber(azMax, 1, '°')}</span> • max range ${fmtNumber((outline.range_max_m ?? 0) / 1000, 1, ' km')}</li>
           <li>Geographic context is a radar site marker plus sector outline only; not gridded and not a map-projected gate field.</li>
           <li>Orientation sketch only: cardinal labels, boundary bearings, and range rings aid readability but are not a projected basemap.</li>
-          <li>Sketch view: <span class="mono">${scale.mode}</span> over roughly <span class="mono">${fmtNumber(scale.rangeKm, 0, ' km')}</span>; the radar sector max range remains ${fmtNumber((outline.range_max_m ?? 0) / 1000, 1, ' km')}.</li>
+          <li>Sketch view: <span class="mono">${scale.mode}</span> over roughly <span class="mono">${fmtNumber(scale.rangeKm, 0, ' km')}</span>; use Full sector for radar reach and Local impact for nearby towns/corridors.</li>
           <li>Map overlays are context overlays only from <span class="mono">stormdeck.map_overlays.v0</span>; overlays do not grid or alter radar gates.</li>
           <li>Warning corridor geometry is schematic context; not an active warning product unless source metadata says so.</li>
         </ul>

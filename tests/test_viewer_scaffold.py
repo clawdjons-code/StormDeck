@@ -174,9 +174,22 @@ def test_viewer_uses_local_overlay_scale_and_readable_warning_corridors():
     assert "collectOverlayPoints" in html
     assert "drawWarningCorridor" in html
     assert "placeCorridorLabel" in html
-    assert "local context scale" in html
+    assert "local impact scale" in html
     assert "Warning corridor geometry is schematic context" in html
     assert "lineWidth = 2.4" in html
+
+
+def test_viewer_has_map_focus_mode_toggle_for_full_sector_and_local_impact():
+    html = VIEWER.read_text(encoding="utf-8")
+
+    assert "mapFocusMode" in html
+    assert "data-map-focus-mode" in html
+    assert "Full sector" in html
+    assert "Local impact" in html
+    assert "resolveMapFocusScale" in html
+    assert "setMapFocusMode" in html
+    assert "full radar sector scale" in html
+    assert "local impact scale" in html
 
 
 def test_viewer_layout_prevents_long_labels_from_jumping_tracks():
