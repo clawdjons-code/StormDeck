@@ -44,6 +44,18 @@ Run the case probe against a local CfRadial file:
 python scripts/stormdeck_case_probe.py /path/to/cfrad-file.nc --out stormdeck_case_probe_export
 ```
 
+Build the smaller engine-facing volume index from the generated probe manifest:
+
+```bash
+python scripts/stormdeck_volume_index.py stormdeck_case_probe_export/<case-name>/manifest.json
+```
+
+Known better-quality `wea-fs` validation input:
+
+```text
+/home/atd_test/storm-deck-data/KATD_Base_Data_20260522_123630_436049100.nc
+```
+
 Local radar inputs and generated imagery are intentionally ignored by git under `data/`, `renders/`, and `stormdeck_case_probe_export/`.
 
 ## Revision v0.2
