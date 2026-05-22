@@ -1,0 +1,24 @@
+{
+  "schema": "stormdeck.map_overlays.v0",
+  "description": "Sample context overlays for the StormDeck orientation sketch. These overlays do not grid, alter, or project radar gate values.",
+  "town_points": [
+    { "name": "Norman", "latitude_deg": 35.2226, "longitude_deg": -97.4395 },
+    { "name": "Moore", "latitude_deg": 35.3395, "longitude_deg": -97.4867 },
+    { "name": "Newcastle", "latitude_deg": 35.2473, "longitude_deg": -97.5998 }
+  ],
+  "warning_corridors": [
+    {
+      "id": "demo-warning-corridor",
+      "label": "demo warning corridor",
+      "confidence": "example only",
+      "points": [
+        { "latitude_deg": 35.05, "longitude_deg": -98.05 },
+        { "latitude_deg": 35.36, "longitude_deg": -98.02 },
+        { "latitude_deg": 35.42, "longitude_deg": -97.55 },
+        { "latitude_deg": 35.10, "longitude_deg": -97.58 }
+      ]
+    }
+  ],
+  "county_boundaries": [],
+  "state_boundaries": []
+}

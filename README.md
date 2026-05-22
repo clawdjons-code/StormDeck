@@ -105,6 +105,18 @@ http://localhost:8765/viewer/index.html
 
 Load `case_timeline.json`, `temporal_tracks.json`, and `change_summary.json` with the file pickers. Optionally load `field_preview.json` to draw a sampled native polar sweep of observed gates. When the CfRadial file includes radar site latitude and longitude, the viewer also draws a radar site marker and sector outline for geographic context. Optionally load `map_overlays.json` (`stormdeck.map_overlays.v0`) to add towns, state/county boundary linework, and warning corridor polygons as context overlays on the orientation sketch only. That context is deliberately not a gridded or map-projected gate field. The viewer intentionally displays observed metadata, pairing rules, scan age, provenance, confidence, uncertainty, warnings, temporal tracks, and the quarantine/debug lane; the optional field preview is not a gridded volume, not 3D, and not a radar field delta.
 
+`map_overlays.json` is optional context data; the radar exporter does not create it yet. To test the layer immediately, load the committed sample file:
+
+```text
+examples/map_overlays.sample.json
+```
+
+Or copy it into your export directory as:
+
+```bash
+cp examples/map_overlays.sample.json /data/stormdeck/exports/20260402_031550/map_overlays.json
+```
+
 Minimal `map_overlays.json` shape:
 
 ```json
