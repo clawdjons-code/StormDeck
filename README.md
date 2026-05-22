@@ -70,6 +70,16 @@ python3 scripts/stormdeck_temporal_tracks.py \
 
 The temporal-tracks exporter classifies complete scan products separately from transition fragments, quarantines tiny or partial products by default, and only groups comparable observations into the same track. For the validated KATD supercell inventory, the expected operational lanes are low-level sector scans, complete 20-sweep Supercell 3D volumes, complete 9-sweep native RHI volumes, and a quarantine/debug lane for fragments.
 
+Build a metadata-safe “what changed” summary from temporal tracks:
+
+```bash
+python3 scripts/stormdeck_change_summary.py \
+  --temporal-tracks /data/stormdeck/exports/20260402_031550/temporal_tracks.json \
+  --out /data/stormdeck/exports/20260402_031550/change_summary.json
+```
+
+The change-summary exporter does not read radar arrays or compute reflectivity/velocity deltas. It reports same-track comparison windows, elapsed time, cadence status, and nearby quarantine events so the replay UI can show an honest first “what changed” panel.
+
 Or scan a CfRadial directory directly on `wea-fs`:
 
 ```bash
