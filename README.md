@@ -141,7 +141,7 @@ Minimal `map_overlays.json` shape:
 }
 ```
 
-`label_priority` on `town_points` is optional: `1` is highest priority, `2` labels when space permits, and `3` draws the town dot without a label unless a future zoom/detail mode asks for it. The viewer declutters town labels; all loaded town dots are still drawn.
+`label_priority` on `town_points` is optional: `1` is highest priority, `2` labels when space permits, and `3` draws the town dot without a label unless a future zoom/detail mode asks for it. The viewer declutters town labels; all loaded town dots are still drawn. When overlays are loaded, the orientation sketch auto-fits to a local context scale around the loaded overlay geometry instead of wasting the panel on the full radar range; the sidebar still preserves the actual radar sector max range. Warning corridor geometry is rendered as brighter schematic context and is not an active warning product unless source metadata says so.
 
 Or scan a CfRadial directory directly on `wea-fs`:
 

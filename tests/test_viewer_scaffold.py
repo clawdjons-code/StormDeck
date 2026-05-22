@@ -167,6 +167,18 @@ def test_viewer_declutters_town_labels_without_hiding_town_points():
     assert "leader line" in html
 
 
+def test_viewer_uses_local_overlay_scale_and_readable_warning_corridors():
+    html = VIEWER.read_text(encoding="utf-8")
+
+    assert "computeOverlaySketchScale" in html
+    assert "collectOverlayPoints" in html
+    assert "drawWarningCorridor" in html
+    assert "placeCorridorLabel" in html
+    assert "local context scale" in html
+    assert "Warning corridor geometry is schematic context" in html
+    assert "lineWidth = 2.4" in html
+
+
 def test_viewer_layout_prevents_long_labels_from_jumping_tracks():
 
     html = VIEWER.read_text(encoding="utf-8")

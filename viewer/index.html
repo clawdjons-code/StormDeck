@@ -612,6 +612,26 @@
       return { x: eastKm * pixelsPerKm, y: -northKm * pixelsPerKm };
     }
 
+    function collectOverlayPoints(overlays = state.map_overlays) {
+      const points = [];
+      overlayList(overlays?.town_points).forEach(point => points.push(point));
+      overlayList(overlays?.warning_corridors ?? overlays?.warning_corridor).forEach(poly => points.push(...overlayList(poly.points ?? poly.polygon ?? poly.coordinates)));
+      overlayList(overlays?.county_boundaries).forEach(line => points.push(...overlayList(line.points ?? line.coordinates)));
+      overlayList(overlays?.state_boundaries).forEach(line => points.push(...overlayList(line.points ?? line.coordinates)));
+      return points;
+    }
+
+    function computeOverlaySketchScale(site, outline, radius) {
+      const radarRangeKm = Math.max(1, Number(outline?.range_max_m ?? 1000) / 1000);
+      const projected = collectOverlayPoints()
+        .map(point => projectLatLonToSketch(point.latitude_deg ?? point.lat, point.longitude_deg ?? point.lon, site, 1))
+        .filter(point => Number.isFinite(point.x) && Number.isFinite(point.y));
+      if (!projected.length) return { rangeKm: radarRangeKm, pixelsPerKm: radius / radarRangeKm, mode: 'full-sector scale' };
+      const maxKm = Math.max(...projected.map(point => Math.hypot(point.x, point.y)), 8);
+      const rangeKm = Math.min(radarRangeKm, Math.max(18, maxKm * 1.35));
+      return { rangeKm, pixelsPerKm: radius / rangeKm, mode: 'local context scale' };
+    }
+
     function drawOverlayPolyline(ctx, points, site, cx, cy, pixelsPerKm, color, close = false) {
       const projected = points
         .map(point => projectLatLonToSketch(point.latitude_deg ?? point.lat, point.longitude_deg ?? point.lon, site, pixelsPerKm))
@@ -630,6 +650,44 @@
         ctx.fillStyle = color.replace('0.88', '0.10').replace('0.72', '0.10');
         ctx.fill();
       }
+    }
+
+    function placeCorridorLabel(ctx, corridor, projected, cx, cy) {
+      if (!corridor.label || projected.length < 3) return;
+      const centroid = projected.reduce((acc, point) => ({ x: acc.x + point.x, y: acc.y + point.y }), { x: 0, y: 0 });
+      const x = cx + centroid.x / projected.length;
+      const y = cy + centroid.y / projected.length;
+      ctx.save();
+      ctx.font = '10px Inter, system-ui';
+      ctx.fillStyle = 'rgba(250, 204, 21, 0.95)';
+      ctx.strokeStyle = 'rgba(7, 10, 18, 0.86)';
+      ctx.lineWidth = 3;
+      ctx.strokeText(corridor.label, x + 5, y - 5);
+      ctx.fillText(corridor.label, x + 5, y - 5);
+      ctx.restore();
+    }
+
+    function drawWarningCorridor(ctx, corridor, site, cx, cy, pixelsPerKm) {
+      const points = overlayList(corridor.points ?? corridor.polygon ?? corridor.coordinates);
+      const projected = points
+        .map(point => projectLatLonToSketch(point.latitude_deg ?? point.lat, point.longitude_deg ?? point.lon, site, pixelsPerKm))
+        .filter(point => Number.isFinite(point.x) && Number.isFinite(point.y));
+      if (projected.length < 2) return;
+      ctx.save();
+      ctx.beginPath();
+      projected.forEach((point, index) => {
+        const x = cx + point.x;
+        const y = cy + point.y;
+        if (index === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      });
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(250, 204, 21, 0.18)';
+      ctx.strokeStyle = 'rgba(250, 204, 21, 0.98)';
+      ctx.lineWidth = 2.4;
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+      placeCorridorLabel(ctx, corridor, projected, cx, cy);
     }
 
     function overlayList(value) {
@@ -701,18 +759,16 @@
       return false;
     }
 
-    function drawMapOverlays(ctx, preview, cx, cy, radius) {
+    function drawMapOverlays(ctx, preview, cx, cy, radius, pixelsPerKm) {
       const overlays = state.map_overlays;
       const site = preview.site ?? {};
       if (!overlays || site.latitude_deg === null || site.longitude_deg === null || site.latitude_deg === undefined || site.longitude_deg === undefined) return countMapOverlayLayers(null);
-      const outline = preview.map_context?.sector_outline ?? {};
-      const pixelsPerKm = radius / Math.max(1, Number(outline.range_max_m ?? 1000) / 1000);
       const counts = countMapOverlayLayers(overlays);
       ctx.save();
       ctx.lineWidth = 1.2;
       overlayList(overlays.state_boundaries).forEach(line => { drawOverlayPolyline(ctx, line.points ?? line.coordinates ?? [], site, cx, cy, pixelsPerKm, 'rgba(148, 163, 184, 0.58)'); });
       overlayList(overlays.county_boundaries).forEach(line => { drawOverlayPolyline(ctx, line.points ?? line.coordinates ?? [], site, cx, cy, pixelsPerKm, 'rgba(100, 116, 139, 0.46)'); });
-      overlayList(overlays.warning_corridors ?? overlays.warning_corridor).forEach(poly => { drawOverlayPolyline(ctx, poly.points ?? poly.polygon ?? poly.coordinates ?? [], site, cx, cy, pixelsPerKm, 'rgba(250, 204, 21, 0.88)', true); });
+      overlayList(overlays.warning_corridors ?? overlays.warning_corridor).forEach(corridor => { drawWarningCorridor(ctx, corridor, site, cx, cy, pixelsPerKm); });
       ctx.font = '10px Inter, system-ui';
       const labelBoxes = [];
       overlayList(overlays.town_points).forEach(town => {
@@ -758,11 +814,12 @@
       const cx = width / 2;
       const cy = height / 2;
       const radius = Math.min(width, height) * 0.34;
+      const scale = computeOverlaySketchScale(site, outline, radius);
       const azMin = Number(outline.azimuth_min_deg ?? preview.sweep?.azimuth_min_deg ?? 0);
       const azMax = Number(outline.azimuth_max_deg ?? preview.sweep?.azimuth_max_deg ?? azMin);
       const start = (azMin - 90) * Math.PI / 180;
       const end = (azMax - 90) * Math.PI / 180;
-      drawRangeRings(ctx, cx, cy, radius, outline.range_max_m);
+      drawRangeRings(ctx, cx, cy, radius, scale.rangeKm * 1000);
       drawOrientationCompass(ctx, cx, cy, radius);
       ctx.fillStyle = 'rgba(99, 102, 241, 0.14)';
       ctx.strokeStyle = 'rgba(190, 190, 255, 0.72)';
@@ -773,7 +830,7 @@
       ctx.closePath();
       ctx.fill();
       ctx.stroke();
-      const overlayCounts = drawMapOverlays(ctx, preview, cx, cy, radius);
+      const overlayCounts = drawMapOverlays(ctx, preview, cx, cy, radius, scale.pixelsPerKm);
       labelSectorBoundary(ctx, cx, cy, radius, azMin, 'right');
       labelSectorBoundary(ctx, cx, cy, radius, azMax, 'left');
 
@@ -788,13 +845,16 @@
       ctx.font = '11px JetBrains Mono, monospace';
       ctx.fillText('sector outline only • not gridded', 18, 44);
       ctx.fillText('orientation sketch only • range rings approximate', 18, 60);
+      ctx.fillText(`${scale.mode} • ${fmtNumber(scale.rangeKm, 0, ' km view')}`, 18, 76);
       summary.innerHTML = `
         <ul class="clean">
           <li>Site: <span class="mono">${fmtNumber(site.latitude_deg, 3)}°, ${fmtNumber(site.longitude_deg, 3)}°</span> • altitude ${fmtNumber(site.altitude_m, 0, ' m')}</li>
           <li>Sector: <span class="mono">${fmtNumber(azMin, 1, '°')}–${fmtNumber(azMax, 1, '°')}</span> • max range ${fmtNumber((outline.range_max_m ?? 0) / 1000, 1, ' km')}</li>
           <li>Geographic context is a radar site marker plus sector outline only; not gridded and not a map-projected gate field.</li>
           <li>Orientation sketch only: cardinal labels, boundary bearings, and range rings aid readability but are not a projected basemap.</li>
+          <li>Sketch view: <span class="mono">${scale.mode}</span> over roughly <span class="mono">${fmtNumber(scale.rangeKm, 0, ' km')}</span>; the radar sector max range remains ${fmtNumber((outline.range_max_m ?? 0) / 1000, 1, ' km')}.</li>
           <li>Map overlays are context overlays only from <span class="mono">stormdeck.map_overlays.v0</span>; overlays do not grid or alter radar gates.</li>
+          <li>Warning corridor geometry is schematic context; not an active warning product unless source metadata says so.</li>
         </ul>
         ${renderOverlayLegend(overlayCounts)}`;
     }
