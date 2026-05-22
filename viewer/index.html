@@ -656,7 +656,49 @@
       <ul class="clean">
         <li>Towns: <span class="mono">${fmt(counts.towns)}</span> • Warning corridors: <span class="mono">${fmt(counts.warningCorridors)}</span></li>
         <li>County boundaries: <span class="mono">${fmt(counts.countyBoundaries)}</span> • State boundaries: <span class="mono">${fmt(counts.stateBoundaries)}</span></li>
+        <li>Town labels are decluttered; dots still indicate all loaded towns.</li>
       </ul>`;
+    }
+
+    function boxesOverlap(a, b, padding = 3) {
+      return !(a.x + a.w + padding < b.x || b.x + b.w + padding < a.x || a.y + a.h + padding < b.y || b.y + b.h + padding < a.y);
+    }
+
+    function drawTownPoint(ctx, x, y) {
+      ctx.fillStyle = 'rgba(248, 250, 252, 0.9)';
+      ctx.beginPath();
+      ctx.arc(x, y, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    function placeTownLabel(ctx, town, x, y, labelBoxes, width, height) {
+      const priority = Number(town.label_priority ?? town.priority ?? 2);
+      if (priority >= 3) return false;
+      const text = town.name ?? 'town';
+      const candidates = [
+        { dx: 7, dy: -6, align: 'left' },
+        { dx: 7, dy: 12, align: 'left' },
+        { dx: -7 - ctx.measureText(text).width, dy: -6, align: 'left' },
+        { dx: -7 - ctx.measureText(text).width, dy: 12, align: 'left' },
+      ];
+      const textWidth = ctx.measureText(text).width;
+      for (const candidate of candidates) {
+        const box = { x: x + candidate.dx - 2, y: y + candidate.dy - 10, w: textWidth + 4, h: 12 };
+        const inside = box.x > 2 && box.y > 2 && box.x + box.w < width - 2 && box.y + box.h < height - 2;
+        const collides = labelBoxes.some(existing => boxesOverlap(box, existing));
+        if (!inside || (collides && priority > 1)) continue;
+        ctx.strokeStyle = 'rgba(248, 250, 252, 0.32)';
+        ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x + candidate.dx, y + candidate.dy - 4);
+        ctx.stroke(); // leader line
+        ctx.fillStyle = 'rgba(248, 250, 252, 0.88)';
+        ctx.fillText(text, x + candidate.dx, y + candidate.dy);
+        labelBoxes.push(box);
+        return true;
+      }
+      return false;
     }
 
     function drawMapOverlays(ctx, preview, cx, cy, radius) {
@@ -672,15 +714,14 @@
       overlayList(overlays.county_boundaries).forEach(line => { drawOverlayPolyline(ctx, line.points ?? line.coordinates ?? [], site, cx, cy, pixelsPerKm, 'rgba(100, 116, 139, 0.46)'); });
       overlayList(overlays.warning_corridors ?? overlays.warning_corridor).forEach(poly => { drawOverlayPolyline(ctx, poly.points ?? poly.polygon ?? poly.coordinates ?? [], site, cx, cy, pixelsPerKm, 'rgba(250, 204, 21, 0.88)', true); });
       ctx.font = '10px Inter, system-ui';
-      ctx.fillStyle = '#f7f8f8';
-      (overlays.town_points ?? []).forEach(town => {
+      const labelBoxes = [];
+      overlayList(overlays.town_points).forEach(town => {
         const point = projectLatLonToSketch(town.latitude_deg ?? town.lat, town.longitude_deg ?? town.lon, site, pixelsPerKm);
         if (!Number.isFinite(point.x) || !Number.isFinite(point.y)) return;
-        ctx.fillStyle = 'rgba(248, 250, 252, 0.88)';
-        ctx.beginPath();
-        ctx.arc(cx + point.x, cy + point.y, 2.5, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillText(town.name ?? 'town', cx + point.x + 5, cy + point.y - 4);
+        const x = cx + point.x;
+        const y = cy + point.y;
+        drawTownPoint(ctx, x, y);
+        placeTownLabel(ctx, town, x, y, labelBoxes, ctx.canvas.width, ctx.canvas.height);
       });
       ctx.restore();
       return counts;

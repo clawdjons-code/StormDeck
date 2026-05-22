@@ -156,6 +156,17 @@ def test_viewer_reports_structured_overlay_layer_counts_and_legend():
     assert "warning corridor" in html
 
 
+def test_viewer_declutters_town_labels_without_hiding_town_points():
+    html = VIEWER.read_text(encoding="utf-8")
+
+    assert "drawTownPoint" in html
+    assert "placeTownLabel" in html
+    assert "labelBoxes" in html
+    assert "label_priority" in html
+    assert "Town labels are decluttered" in html
+    assert "leader line" in html
+
+
 def test_viewer_layout_prevents_long_labels_from_jumping_tracks():
 
     html = VIEWER.read_text(encoding="utf-8")

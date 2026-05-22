@@ -123,7 +123,7 @@ Minimal `map_overlays.json` shape:
 {
   "schema": "stormdeck.map_overlays.v0",
   "town_points": [
-    { "name": "Norman", "latitude_deg": 35.2226, "longitude_deg": -97.4395 }
+    { "name": "Norman", "latitude_deg": 35.2226, "longitude_deg": -97.4395, "label_priority": 1 }
   ],
   "warning_corridors": [
     {
@@ -140,6 +140,8 @@ Minimal `map_overlays.json` shape:
   "state_boundaries": []
 }
 ```
+
+`label_priority` on `town_points` is optional: `1` is highest priority, `2` labels when space permits, and `3` draws the town dot without a label unless a future zoom/detail mode asks for it. The viewer declutters town labels; all loaded town dots are still drawn.
 
 Or scan a CfRadial directory directly on `wea-fs`:
 

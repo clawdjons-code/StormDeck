@@ -2,9 +2,9 @@
   "schema": "stormdeck.map_overlays.v0",
   "description": "Sample context overlays for the StormDeck orientation sketch. These overlays do not grid, alter, or project radar gate values.",
   "town_points": [
-    { "name": "Norman", "latitude_deg": 35.2226, "longitude_deg": -97.4395 },
-    { "name": "Moore", "latitude_deg": 35.3395, "longitude_deg": -97.4867 },
-    { "name": "Newcastle", "latitude_deg": 35.2473, "longitude_deg": -97.5998 }
+    { "name": "Norman", "latitude_deg": 35.2226, "longitude_deg": -97.4395, "label_priority": 1 },
+    { "name": "Moore", "latitude_deg": 35.3395, "longitude_deg": -97.4867, "label_priority": 2 },
+    { "name": "Newcastle", "latitude_deg": 35.2473, "longitude_deg": -97.5998, "label_priority": 3 }
   ],
   "warning_corridors": [
     {
