@@ -167,6 +167,10 @@
     .map-context { margin-top: 14px; display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 12px; align-items: stretch; }
     .map-context-wrap { min-height: 220px; border: 1px solid var(--border-soft); border-radius: 14px; background: rgba(0,0,0,.22); display: grid; place-items: center; overflow: hidden; }
     #map-context-canvas { width: 100%; max-width: 420px; aspect-ratio: 4 / 3; }
+    .overlay-legend { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 10px; margin-top: 8px; font-size: 11px; color: var(--muted); }
+    .legend-key { display: inline-flex; align-items: center; gap: 6px; min-width: 0; overflow-wrap: anywhere; }
+    .overlay-swatch { width: 18px; height: 3px; border-radius: 999px; background: var(--swatch, #94a3b8); box-shadow: 0 0 0 1px rgba(255,255,255,0.08); }
+    .overlay-dot { width: 7px; height: 7px; border-radius: 999px; background: var(--swatch, #f8fafc); }
     #field-preview-legend { margin-top: 12px; }
     .legend-row { display: grid; grid-template-columns: 46px 1fr; gap: 8px; align-items: center; color: var(--muted); font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11px; }
     .legend-swatch { height: 8px; border-radius: 99px; border: 1px solid rgba(255,255,255,.18); }
@@ -633,18 +637,40 @@
       return Array.isArray(value) ? value : [value];
     }
 
+    function countMapOverlayLayers(overlays = state.map_overlays) {
+      return {
+        towns: overlayList(overlays?.town_points).length,
+        warningCorridors: overlayList(overlays?.warning_corridors ?? overlays?.warning_corridor).length,
+        countyBoundaries: overlayList(overlays?.county_boundaries).length,
+        stateBoundaries: overlayList(overlays?.state_boundaries).length,
+      };
+    }
+
+    function renderOverlayLegend(counts) {
+      return `<div class="overlay-legend" aria-label="map overlay legend">
+        <span class="legend-key"><span class="overlay-dot" style="--swatch:#f8fafc"></span>town point</span>
+        <span class="legend-key"><span class="overlay-swatch" style="--swatch:#facc15"></span>warning corridor</span>
+        <span class="legend-key"><span class="overlay-swatch" style="--swatch:#64748b"></span>county boundary</span>
+        <span class="legend-key"><span class="overlay-swatch" style="--swatch:#94a3b8"></span>state boundary</span>
+      </div>
+      <ul class="clean">
+        <li>Towns: <span class="mono">${fmt(counts.towns)}</span> • Warning corridors: <span class="mono">${fmt(counts.warningCorridors)}</span></li>
+        <li>County boundaries: <span class="mono">${fmt(counts.countyBoundaries)}</span> • State boundaries: <span class="mono">${fmt(counts.stateBoundaries)}</span></li>
+      </ul>`;
+    }
+
     function drawMapOverlays(ctx, preview, cx, cy, radius) {
       const overlays = state.map_overlays;
       const site = preview.site ?? {};
-      if (!overlays || site.latitude_deg === null || site.longitude_deg === null || site.latitude_deg === undefined || site.longitude_deg === undefined) return 0;
+      if (!overlays || site.latitude_deg === null || site.longitude_deg === null || site.latitude_deg === undefined || site.longitude_deg === undefined) return countMapOverlayLayers(null);
       const outline = preview.map_context?.sector_outline ?? {};
       const pixelsPerKm = radius / Math.max(1, Number(outline.range_max_m ?? 1000) / 1000);
-      let count = 0;
+      const counts = countMapOverlayLayers(overlays);
       ctx.save();
       ctx.lineWidth = 1.2;
-      overlayList(overlays.state_boundaries).forEach(line => { drawOverlayPolyline(ctx, line.points ?? line.coordinates ?? [], site, cx, cy, pixelsPerKm, 'rgba(148, 163, 184, 0.58)'); count++; });
-      overlayList(overlays.county_boundaries).forEach(line => { drawOverlayPolyline(ctx, line.points ?? line.coordinates ?? [], site, cx, cy, pixelsPerKm, 'rgba(100, 116, 139, 0.46)'); count++; });
-      overlayList(overlays.warning_corridors ?? overlays.warning_corridor).forEach(poly => { drawOverlayPolyline(ctx, poly.points ?? poly.polygon ?? poly.coordinates ?? [], site, cx, cy, pixelsPerKm, 'rgba(250, 204, 21, 0.88)', true); count++; });
+      overlayList(overlays.state_boundaries).forEach(line => { drawOverlayPolyline(ctx, line.points ?? line.coordinates ?? [], site, cx, cy, pixelsPerKm, 'rgba(148, 163, 184, 0.58)'); });
+      overlayList(overlays.county_boundaries).forEach(line => { drawOverlayPolyline(ctx, line.points ?? line.coordinates ?? [], site, cx, cy, pixelsPerKm, 'rgba(100, 116, 139, 0.46)'); });
+      overlayList(overlays.warning_corridors ?? overlays.warning_corridor).forEach(poly => { drawOverlayPolyline(ctx, poly.points ?? poly.polygon ?? poly.coordinates ?? [], site, cx, cy, pixelsPerKm, 'rgba(250, 204, 21, 0.88)', true); });
       ctx.font = '10px Inter, system-ui';
       ctx.fillStyle = '#f7f8f8';
       (overlays.town_points ?? []).forEach(town => {
@@ -655,10 +681,9 @@
         ctx.arc(cx + point.x, cy + point.y, 2.5, 0, Math.PI * 2);
         ctx.fill();
         ctx.fillText(town.name ?? 'town', cx + point.x + 5, cy + point.y - 4);
-        count++;
       });
       ctx.restore();
-      return count;
+      return counts;
     }
 
     function drawMapContext(canvas, preview) {
@@ -707,7 +732,7 @@
       ctx.closePath();
       ctx.fill();
       ctx.stroke();
-      const overlayCount = drawMapOverlays(ctx, preview, cx, cy, radius);
+      const overlayCounts = drawMapOverlays(ctx, preview, cx, cy, radius);
       labelSectorBoundary(ctx, cx, cy, radius, azMin, 'right');
       labelSectorBoundary(ctx, cx, cy, radius, azMax, 'left');
 
@@ -728,8 +753,9 @@
           <li>Sector: <span class="mono">${fmtNumber(azMin, 1, '°')}–${fmtNumber(azMax, 1, '°')}</span> • max range ${fmtNumber((outline.range_max_m ?? 0) / 1000, 1, ' km')}</li>
           <li>Geographic context is a radar site marker plus sector outline only; not gridded and not a map-projected gate field.</li>
           <li>Orientation sketch only: cardinal labels, boundary bearings, and range rings aid readability but are not a projected basemap.</li>
-          <li>Map overlays: <span class="mono">${fmt(overlayCount)}</span> context overlays only from <span class="mono">stormdeck.map_overlays.v0</span>; overlays do not grid or alter radar gates.</li>
-        </ul>`;
+          <li>Map overlays are context overlays only from <span class="mono">stormdeck.map_overlays.v0</span>; overlays do not grid or alter radar gates.</li>
+        </ul>
+        ${renderOverlayLegend(overlayCounts)}`;
     }
 
     function drawNativePolarPreview(canvas, preview) {

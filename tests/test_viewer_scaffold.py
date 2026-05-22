@@ -142,7 +142,22 @@ def test_viewer_supports_map_overlays_contract_without_gridding_radar():
     assert "context overlays only" in html
 
 
+def test_viewer_reports_structured_overlay_layer_counts_and_legend():
+    html = VIEWER.read_text(encoding="utf-8")
+
+    assert "countMapOverlayLayers" in html
+    assert "renderOverlayLegend" in html
+    assert "Towns:" in html
+    assert "Warning corridors:" in html
+    assert "County boundaries:" in html
+    assert "State boundaries:" in html
+    assert "overlay-legend" in html
+    assert "town point" in html
+    assert "warning corridor" in html
+
+
 def test_viewer_layout_prevents_long_labels_from_jumping_tracks():
+
     html = VIEWER.read_text(encoding="utf-8")
 
     assert "minmax(0, 1fr)" in html
