@@ -56,9 +56,45 @@ def test_builds_browser_safe_observed_gate_preview_contract():
     assert preview["display_metadata"]["scan_name"] is None
     assert preview["display_metadata"]["radial_count"] == 3
     assert preview["display_metadata"]["fixed_angle_label"] == "0.5°"
+    assert preview["site"] == {
+        "latitude_deg": None,
+        "longitude_deg": None,
+        "altitude_m": None,
+        "source": "not_available",
+    }
+    assert preview["map_context"]["status"] == "not_georeferenced_no_site_location"
+    assert preview["map_context"]["rendering_mode"] == "sector_outline_only_not_gridded"
     assert preview["warnings"] == [
         "Observed radar field sample only; not a gridded volume and not a field-value delta."
     ]
+
+
+def test_includes_radar_site_and_projected_sector_context_when_available():
+    mod = load_module()
+    preview = mod.build_field_preview_from_arrays(
+        field=np.ones((3, 4)),
+        range_m=np.array([0.0, 1000.0, 2000.0, 3000.0]),
+        azimuth_deg=np.array([210.0, 215.0, 220.0]),
+        elevation_deg=np.array([0.5, 0.5, 0.5]),
+        field_name="REF",
+        source_path="sample.nc",
+        sweep_name="sweep_0",
+        radar_latitude_deg=35.333,
+        radar_longitude_deg=-97.277,
+        radar_altitude_m=365.0,
+    )
+
+    assert preview["site"] == {
+        "latitude_deg": 35.333,
+        "longitude_deg": -97.277,
+        "altitude_m": 365.0,
+        "source": "CfRadial site metadata",
+    }
+    assert preview["map_context"]["status"] == "georeferenced_sector_outline_available"
+    assert preview["map_context"]["rendering_mode"] == "sector_outline_only_not_gridded"
+    assert preview["map_context"]["sector_outline"]["azimuth_min_deg"] == 210.0
+    assert preview["map_context"]["sector_outline"]["azimuth_max_deg"] == 220.0
+    assert preview["map_context"]["sector_outline"]["range_max_m"] == 3000.0
 
 
 def test_labels_ppi_elevation_to_tenth_degree_despite_float_jitter():

@@ -103,7 +103,7 @@ Then open:
 http://localhost:8765/viewer/index.html
 ```
 
-Load `case_timeline.json`, `temporal_tracks.json`, and `change_summary.json` with the file pickers. Optionally load `field_preview.json` to draw a sampled native polar sweep of observed gates. The viewer intentionally displays observed metadata, pairing rules, scan age, provenance, confidence, uncertainty, warnings, temporal tracks, and the quarantine/debug lane; the optional field preview is not a gridded volume, not 3D, and not a radar field delta.
+Load `case_timeline.json`, `temporal_tracks.json`, and `change_summary.json` with the file pickers. Optionally load `field_preview.json` to draw a sampled native polar sweep of observed gates. When the CfRadial file includes radar site latitude and longitude, the viewer also draws a radar site marker and sector outline for geographic context. That context is deliberately not a gridded or map-projected gate field. The viewer intentionally displays observed metadata, pairing rules, scan age, provenance, confidence, uncertainty, warnings, temporal tracks, and the quarantine/debug lane; the optional field preview is not a gridded volume, not 3D, and not a radar field delta.
 
 Or scan a CfRadial directory directly on `wea-fs`:
 

@@ -104,6 +104,17 @@ def test_viewer_derives_elevation_metadata_from_legacy_coordinate_arrays():
     assert "fixed_angle_label" in html
 
 
+def test_viewer_adds_non_gridded_map_context_for_native_sector():
+    html = VIEWER.read_text(encoding="utf-8")
+
+    assert 'id="map-context-canvas"' in html
+    assert 'id="map-context-summary"' in html
+    assert "drawMapContext" in html
+    assert "sector outline only" in html
+    assert "not gridded" in html
+    assert "radar site marker" in html
+
+
 def test_viewer_layout_prevents_long_labels_from_jumping_tracks():
     html = VIEWER.read_text(encoding="utf-8")
 

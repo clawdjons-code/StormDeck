@@ -142,6 +142,38 @@ def _angle_label(value: Optional[float], approximate: bool = False) -> Optional[
     return f"{prefix}{value:.1f}°"
 
 
+def _site_payload(latitude: Optional[Any], longitude: Optional[Any], altitude: Optional[Any]) -> Dict[str, Any]:
+    lat = json_safe(float(latitude)) if latitude is not None and math.isfinite(float(latitude)) else None
+    lon = json_safe(float(longitude)) if longitude is not None and math.isfinite(float(longitude)) else None
+    alt = json_safe(float(altitude)) if altitude is not None and math.isfinite(float(altitude)) else None
+    return {
+        "latitude_deg": lat,
+        "longitude_deg": lon,
+        "altitude_m": alt,
+        "source": "CfRadial site metadata" if lat is not None and lon is not None else "not_available",
+    }
+
+
+def _sector_outline_payload(az: np.ndarray, ranges: np.ndarray, site: Dict[str, Any]) -> Dict[str, Any]:
+    max_range = float(np.nanmax(ranges)) if ranges.size else None
+    if site.get("latitude_deg") is None or site.get("longitude_deg") is None or max_range is None:
+        return {
+            "status": "not_georeferenced_no_site_location",
+            "rendering_mode": "sector_outline_only_not_gridded",
+            "sector_outline": None,
+        }
+    return {
+        "status": "georeferenced_sector_outline_available",
+        "rendering_mode": "sector_outline_only_not_gridded",
+        "sector_outline": {
+            "azimuth_min_deg": json_safe(float(np.nanmin(az))) if az.size else None,
+            "azimuth_max_deg": json_safe(float(np.nanmax(az))) if az.size else None,
+            "range_max_m": json_safe(max_range),
+            "projection_note": "Browser preview draws a radar-centered sector outline; no gate gridding or map reprojection is applied.",
+        },
+    }
+
+
 def build_field_preview_from_arrays(
     *,
     field: Any,
@@ -156,6 +188,9 @@ def build_field_preview_from_arrays(
     source_schema: Optional[str] = None,
     source_time: Optional[str] = None,
     scan_name: Optional[str] = None,
+    radar_latitude_deg: Optional[Any] = None,
+    radar_longitude_deg: Optional[Any] = None,
+    radar_altitude_m: Optional[Any] = None,
     max_rays: int = 240,
     max_gates: int = 480,
 ) -> Dict[str, Any]:
@@ -197,6 +232,8 @@ def build_field_preview_from_arrays(
     fixed_angle_approx = use_elevation_label and elevation_min is not None and elevation_max is not None and elevation_min != elevation_max
     fixed_angle_label = _angle_label(fixed_angle, fixed_angle_approx)
     reflectivity_like = field_name.upper() in ("REF", "DBZ", "DZ", "ZH")
+    site = _site_payload(radar_latitude_deg, radar_longitude_deg, radar_altitude_m)
+    map_context = _sector_outline_payload(az, ranges, site)
 
     return {
         "schema": "stormdeck.field_preview.v0",
@@ -208,6 +245,8 @@ def build_field_preview_from_arrays(
             "time_coverage_start": source_time,
             "scan_name": scan_name,
         },
+        "site": site,
+        "map_context": map_context,
         "display_metadata": {
             "scan_name": scan_name,
             "time_coverage_start": source_time,
@@ -289,6 +328,16 @@ def _read_coord(group: Any, logical_name: str) -> Tuple[str, np.ndarray]:
     return name, np.asarray(group.variables[name][:], dtype="float64")
 
 
+def _read_scalar_var(ds: Any, name: str) -> Optional[Any]:
+    var = ds.variables.get(name)
+    if var is None:
+        return None
+    arr = np.asarray(var[:])
+    if arr.size == 0:
+        return None
+    return arr.reshape(-1)[0].item()
+
+
 def build_field_preview_from_cfradial(
     nc_path: Path,
     *,
@@ -321,6 +370,9 @@ def build_field_preview_from_cfradial(
             source_schema="CfRadial NetCDF",
             source_time=json_safe(getattr(ds, "time_coverage_start", None)),
             scan_name=json_safe(getattr(ds, "scan_name", None)),
+            radar_latitude_deg=_read_scalar_var(ds, "latitude"),
+            radar_longitude_deg=_read_scalar_var(ds, "longitude"),
+            radar_altitude_m=_read_scalar_var(ds, "altitude"),
             sweep_name=sweep_name,
             max_rays=max_rays,
             max_gates=max_gates,
