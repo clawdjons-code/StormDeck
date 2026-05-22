@@ -61,6 +61,27 @@ def test_builds_browser_safe_observed_gate_preview_contract():
     ]
 
 
+def test_labels_ppi_elevation_to_tenth_degree_despite_float_jitter():
+    mod = load_module()
+    preview = mod.build_field_preview_from_arrays(
+        field=np.ones((4, 3)),
+        range_m=np.array([1000.0, 2000.0, 3000.0]),
+        azimuth_deg=np.array([200.0, 201.0, 202.0, 203.0]),
+        elevation_deg=np.array([0.49999997, 0.50000003, 0.59999996, 0.60000004]),
+        field_name="REF",
+        field_units="dBZ",
+        source_path="sample.nc",
+        sweep_name="sweep_0",
+    )
+
+    display = preview["display_metadata"]
+    assert display["fixed_angle_label"] == "~0.6°"
+    assert display["elevation_precision_deg"] == 0.1
+    assert display["elevation_median_deg"] == 0.6
+    assert display["elevation_min_deg"] == 0.5
+    assert display["elevation_max_deg"] == 0.6
+
+
 def test_rejects_mismatched_geometry_lengths():
     mod = load_module()
 

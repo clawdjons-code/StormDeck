@@ -323,6 +323,12 @@
       return `${value}${suffix}`;
     }
 
+    function fmtNumber(value, digits = 1, suffix = '') {
+      const numeric = Number(value);
+      if (!Number.isFinite(numeric)) return '—';
+      return `${numeric.toFixed(digits)}${suffix}`;
+    }
+
     function shortTime(value) {
       if (!value) return '—';
       return String(value).replace('2026-04-02 ', '');
@@ -470,8 +476,9 @@
           <li>Scan: <span class="mono">${escapeHtml(display.scan_name ?? preview.source?.scan_name ?? 'unknown')}</span></li>
           <li>Time: <span class="mono">${escapeHtml(shortTime(display.time_coverage_start ?? preview.source?.time_coverage_start))}</span></li>
           <li>Elevation: <span class="mono">${escapeHtml(display.fixed_angle_label ?? 'unknown')}</span> • Sweep: <span class="mono">${escapeHtml(preview.sweep?.name)}</span></li>
+          <li>Elevation span: <span class="mono">${fmtNumber(display.elevation_min_deg, 1, '°')}–${fmtNumber(display.elevation_max_deg, 1, '°')}</span> • median <span class="mono">${fmtNumber(display.elevation_median_deg, 1, '°')}</span> • strategy precision 0.1° • ~ means rounded/jittered</li>
           <li>Radials: ${fmt(display.radial_count ?? preview.sweep?.ray_count)} • Samples: ${fmt(sampling.sampled_ray_count)} rays × ${fmt(sampling.sampled_gate_count)} gates from ${fmt(preview.sweep?.ray_count)} × ${fmt(preview.sweep?.gate_count)}</li>
-          <li>Range: ${fmt(stats.min)} to ${fmt(stats.max)} • valid gates ${fmt(stats.valid_gate_count)} • missing gates ${fmt(stats.missing_gate_count)}</li>
+          <li>Range: ${fmtNumber(stats.min, 1)} to ${fmtNumber(stats.max, 1)} • valid gates ${fmt(stats.valid_gate_count)} • missing gates ${fmt(stats.missing_gate_count)}</li>
           <li>Data source: ${escapeHtml(preview.source?.path)}. Confidence: observed radar field sample. Uncertainty: sampled arrays only; not a gridded volume, not 3D, and not a field-value delta.</li>
           ${(preview.warnings ?? []).map(w => `<li>${escapeHtml(w)}</li>`).join('')}
         </ul>`;

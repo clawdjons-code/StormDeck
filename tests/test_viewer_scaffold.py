@@ -86,6 +86,15 @@ def test_viewer_uses_atd_reflectivity_palette_and_compact_metadata():
         assert phrase in html
 
 
+def test_viewer_rounds_numeric_field_values_for_operator_readability():
+    html = VIEWER.read_text(encoding="utf-8")
+
+    assert "fmtNumber(stats.min, 1)" in html
+    assert "fmtNumber(stats.max, 1)" in html
+    assert "Elevation span:" in html
+    assert "~" in html
+
+
 def test_viewer_layout_prevents_long_labels_from_jumping_tracks():
     html = VIEWER.read_text(encoding="utf-8")
 

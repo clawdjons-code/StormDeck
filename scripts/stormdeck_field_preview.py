@@ -125,6 +125,23 @@ def _json_value_matrix(arr: np.ndarray) -> List[List[Optional[float]]]:
     return rows
 
 
+def _round_tenth(value: float) -> Optional[float]:
+    if not math.isfinite(value):
+        return None
+    scaled = float(value) * 10.0
+    epsilon = 1e-6
+    if scaled >= 0:
+        return math.floor(scaled + 0.5 + epsilon) / 10.0
+    return math.ceil(scaled - 0.5 - epsilon) / 10.0
+
+
+def _angle_label(value: Optional[float], approximate: bool = False) -> Optional[str]:
+    if value is None:
+        return None
+    prefix = "~" if approximate else ""
+    return f"{prefix}{value:.1f}°"
+
+
 def build_field_preview_from_arrays(
     *,
     field: Any,
@@ -169,8 +186,16 @@ def build_field_preview_from_arrays(
     sampled_ranges = _sample_axis(ranges, gate_stride)
     el_span = float(np.nanmax(el) - np.nanmin(el)) if el.size else float("nan")
     az_span = float(np.nanmax(az) - np.nanmin(az)) if az.size else float("nan")
-    fixed_angle = float(np.nanmedian(el)) if math.isfinite(el_span) and el_span <= 0.1 else float(np.nanmedian(az)) if az.size else float("nan")
-    fixed_angle_label = f"{fixed_angle:.1f}°" if math.isfinite(fixed_angle) else None
+    elevation_min = _round_tenth(float(np.nanmin(el))) if el.size else None
+    elevation_max = _round_tenth(float(np.nanmax(el))) if el.size else None
+    elevation_median = _round_tenth(float(np.nanmedian(el))) if el.size else None
+    azimuth_min = _round_tenth(float(np.nanmin(az))) if az.size else None
+    azimuth_max = _round_tenth(float(np.nanmax(az))) if az.size else None
+    azimuth_median = _round_tenth(float(np.nanmedian(az))) if az.size else None
+    use_elevation_label = (elevation_median is not None) and (not math.isfinite(az_span) or not math.isfinite(el_span) or az_span >= el_span)
+    fixed_angle = elevation_median if use_elevation_label else azimuth_median
+    fixed_angle_approx = use_elevation_label and elevation_min is not None and elevation_max is not None and elevation_min != elevation_max
+    fixed_angle_label = _angle_label(fixed_angle, fixed_angle_approx)
     reflectivity_like = field_name.upper() in ("REF", "DBZ", "DZ", "ZH")
 
     return {
@@ -188,6 +213,13 @@ def build_field_preview_from_arrays(
             "time_coverage_start": source_time,
             "radial_count": int(ray_count),
             "fixed_angle_label": fixed_angle_label,
+            "elevation_precision_deg": 0.1,
+            "elevation_min_deg": elevation_min,
+            "elevation_max_deg": elevation_max,
+            "elevation_median_deg": elevation_median,
+            "azimuth_min_deg": azimuth_min,
+            "azimuth_max_deg": azimuth_max,
+            "azimuth_median_deg": azimuth_median,
             "azimuth_span_deg": json_safe(az_span),
             "elevation_span_deg": json_safe(el_span),
         },
