@@ -162,6 +162,14 @@
 
     .quarantine-row { font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
     .field-preview-grid { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 16px; align-items: stretch; }
+    .scene-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+    .scene-mode-toggle { display: inline-flex; gap: 6px; padding: 4px; border: 1px solid var(--border-soft); border-radius: 999px; background: rgba(255,255,255,.025); }
+    .scene-mode-toggle button, .scene-playback button { border: 0; border-radius: 999px; padding: 7px 11px; color: var(--muted); background: transparent; cursor: pointer; font: inherit; font-size: 12px; }
+    .scene-mode-toggle button.active, .scene-playback button.active { color: var(--text); background: rgba(113,112,255,.24); box-shadow: inset 0 0 0 1px rgba(190,190,255,.22); }
+    .scene-playback { display: inline-flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .scene-slider { display: inline-flex; gap: 6px; align-items: center; color: var(--muted); font-size: 11px; }
+    .scene-slider input { width: 96px; accent-color: var(--accent); }
+    .scene-status { margin-top: 12px; }
     .radar-canvas-wrap { min-height: 420px; border: 1px solid var(--border-soft); border-radius: 14px; background: rgba(0,0,0,.22); display: grid; place-items: center; overflow: hidden; }
     #field-preview-canvas { width: 100%; max-width: 620px; aspect-ratio: 1 / 1; }
     .map-context { margin-top: 14px; display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 12px; align-items: stretch; }
@@ -278,9 +286,23 @@
 
     <section class="panel" id="field-preview" style="margin-top:18px;">
       <div class="section-title"><h3>Observed radar field sample</h3><span class="mono">stormdeck.field_preview.v0</span></div>
+      <div class="scene-toolbar" aria-label="radar scene controls">
+        <div class="scene-mode-toggle" role="group" aria-label="field preview render mode">
+          <button type="button" data-scene-mode="native-polar">Native polar</button>
+          <button type="button" data-scene-mode="two-point-five-d">2.5D slab</button>
+        </div>
+        <div class="scene-playback">
+          <button type="button" id="animation-toggle" onclick="toggleAnimation()">Play sweep</button>
+          <label class="scene-slider" for="scene-tilt-slider">tilt <input id="scene-tilt-slider" type="range" min="0" max="65" value="42" oninput="setSceneTilt(this.value)"></label>
+          <label class="scene-slider" for="vertical-exaggeration-slider">exag <input id="vertical-exaggeration-slider" type="range" min="0" max="70" value="30" oninput="setSceneExaggeration(this.value)"></label>
+        </div>
+      </div>
       <div class="field-preview-grid">
-        <div class="radar-canvas-wrap">
-          <canvas id="field-preview-canvas" width="620" height="620" aria-label="native polar sweep field preview"></canvas>
+        <div>
+          <div class="radar-canvas-wrap">
+            <canvas id="field-preview-canvas" width="620" height="620" aria-label="native polar sweep field preview"></canvas>
+          </div>
+          <div id="scene-status" class="scene-status" aria-live="polite"></div>
         </div>
         <div>
           <div id="field-preview-summary">
@@ -315,7 +337,21 @@
   </main>
 
   <script>
-    const state = { case_timeline: null, temporal_tracks: null, change_summary: null, field_preview: null, map_overlays: null, selectedTrackId: null, mapFocusMode: 'local-impact' };
+    const state = {
+      case_timeline: null,
+      temporal_tracks: null,
+      change_summary: null,
+      field_preview: null,
+      map_overlays: null,
+      selectedTrackId: null,
+      mapFocusMode: 'local-impact',
+      sceneMode: 'two-point-five-d',
+      animationPlaying: false,
+      animationPhase: 0,
+      animationFrameId: null,
+      sceneTiltDeg: 42,
+      verticalExaggeration: 30,
+    };
     const ATD_REFLECTIVITY_STOPS = [
       { value: 90, color: '#050505' },
       { value: 80, color: '#00e5ff' },
@@ -336,6 +372,46 @@
       state.mapFocusMode = mode === 'full-sector' ? 'full-sector' : 'local-impact';
       renderAll();
     }
+
+    function setSceneMode(mode) {
+      state.sceneMode = mode === 'native-polar' ? 'native-polar' : 'two-point-five-d';
+      renderFieldPreview();
+    }
+
+    function setSceneTilt(value) {
+      state.sceneTiltDeg = Number(value) || 0;
+      renderFieldPreview();
+    }
+
+    function setSceneExaggeration(value) {
+      state.verticalExaggeration = Number(value) || 0;
+      renderFieldPreview();
+    }
+
+    function toggleAnimation() {
+      state.animationPlaying = !state.animationPlaying;
+      if (state.animationPlaying) startAnimationLoop(); else stopAnimationLoop();
+      renderFieldPreview();
+    }
+
+    function startAnimationLoop() {
+      if (state.animationFrameId) return;
+      const tick = () => {
+        state.animationPhase = (state.animationPhase + 2.4) % 360;
+        if (state.field_preview) renderFieldPreview();
+        state.animationFrameId = state.animationPlaying ? requestAnimationFrame(tick) : null;
+      };
+      state.animationFrameId = requestAnimationFrame(tick);
+    }
+
+    function stopAnimationLoop() {
+      if (state.animationFrameId) cancelAnimationFrame(state.animationFrameId);
+      state.animationFrameId = null;
+    }
+
+    document.querySelectorAll('[data-scene-mode]').forEach(button => {
+      button.addEventListener('click', () => setSceneMode(button.dataset.sceneMode));
+    });
 
     document.querySelectorAll('[data-map-focus-mode]').forEach(button => {
       button.addEventListener('click', () => setMapFocusMode(button.dataset.mapFocusMode));
@@ -498,6 +574,8 @@
       const canvas = document.getElementById('field-preview-canvas');
       if (!preview) {
         clearCanvas(canvas, 'Load field_preview.json');
+        renderSceneControls();
+        document.getElementById('scene-status').innerHTML = `<ul class="clean"><li>Animation and 2.5D controls arm after field_preview.json is loaded.</li></ul>`;
         clearCanvas(document.getElementById('map-context-canvas'), 'Load site metadata for map context');
         document.getElementById('map-context-summary').innerHTML = `
           <ul class="clean">
@@ -512,7 +590,10 @@
         legend.innerHTML = '';
         return;
       }
-      drawNativePolarPreview(canvas, preview);
+      renderSceneControls();
+      if (state.sceneMode === 'native-polar') drawNativePolarPreview(canvas, preview); else drawTwoPointFiveDSlabPreview(canvas, preview);
+      drawScanSweepOverlay(canvas, preview);
+      renderSceneStatus(preview);
       drawMapContext(document.getElementById('map-context-canvas'), preview);
       renderFieldLegend(preview);
       const stats = preview.field?.stats ?? {};
@@ -527,7 +608,7 @@
           <li>Elevation span: <span class="mono">${fmtNumber(display.elevation_min_deg, 1, '°')}–${fmtNumber(display.elevation_max_deg, 1, '°')}</span> • median <span class="mono">${fmtNumber(display.elevation_median_deg, 1, '°')}</span> • strategy precision 0.1° • ~ means rounded/jittered</li>
           <li>Radials: ${fmt(display.radial_count ?? preview.sweep?.ray_count)} • Samples: ${fmt(sampling.sampled_ray_count)} rays × ${fmt(sampling.sampled_gate_count)} gates from ${fmt(preview.sweep?.ray_count)} × ${fmt(preview.sweep?.gate_count)}</li>
           <li>Range: ${fmtNumber(stats.min, 1)} to ${fmtNumber(stats.max, 1)} • valid gates ${fmt(stats.valid_gate_count)} • missing gates ${fmt(stats.missing_gate_count)}</li>
-          <li>Data source: ${escapeHtml(preview.source?.path)}. Confidence: observed radar field sample. Uncertainty: sampled arrays only; not a gridded volume, not 3D, and not a field-value delta.</li>
+          <li>Data source: ${escapeHtml(preview.source?.path)}. Confidence: observed radar field sample. Uncertainty: sampled arrays only; 2.5D slab uses observed gates extruded for visual emphasis, not a vertical retrieval, not a gridded volume, and not a field-value delta.</li>
           ${(preview.warnings ?? []).map(w => `<li>${escapeHtml(w)}</li>`).join('')}
         </ul>`;
     }
@@ -892,6 +973,118 @@
           <li>Warning corridor geometry is schematic context; not an active warning product unless source metadata says so.</li>
         </ul>
         ${renderOverlayLegend(overlayCounts)}`;
+    }
+
+    function renderSceneControls() {
+      document.querySelectorAll('[data-scene-mode]').forEach(button => button.classList.toggle('active', button.dataset.sceneMode === state.sceneMode));
+      const toggle = document.getElementById('animation-toggle');
+      if (toggle) {
+        toggle.textContent = state.animationPlaying ? 'Pause sweep' : 'Play sweep';
+        toggle.classList.toggle('active', state.animationPlaying);
+      }
+      const tilt = document.getElementById('scene-tilt-slider');
+      if (tilt && Number(tilt.value) !== state.sceneTiltDeg) tilt.value = state.sceneTiltDeg;
+      const exaggeration = document.getElementById('vertical-exaggeration-slider');
+      if (exaggeration && Number(exaggeration.value) !== state.verticalExaggeration) exaggeration.value = state.verticalExaggeration;
+    }
+
+    function renderSceneStatus(preview) {
+      const status = document.getElementById('scene-status');
+      const stats = preview.field?.stats ?? {};
+      const modeLabel = state.sceneMode === 'native-polar' ? 'Native polar' : '2.5D slab';
+      status.innerHTML = `
+        <ul class="clean">
+          <li>${modeLabel}: observed gates only; no invented interpolation, no volumetric reconstruction.</li>
+          <li>Animation: ${state.animationPlaying ? 'playing scan sweep overlay' : 'paused scan sweep overlay'} at <span class="mono">${fmtNumber(state.animationPhase, 0, '°')}</span>. Sweep overlay is a temporal/orientation cue, not a new frame.</li>
+          <li>2.5D slab: observed gates extruded for visual emphasis from ${fmtNumber(stats.min, 1)} to ${fmtNumber(stats.max, 1)}; not a vertical retrieval.</li>
+        </ul>`;
+    }
+
+    function valueHeightPx(value, vmin, vmax) {
+      const t = Math.max(0, Math.min(1, (Number(value) - vmin) / Math.max(0.001, vmax - vmin)));
+      return t * state.verticalExaggeration;
+    }
+
+    function drawTwoPointFiveDSlabPreview(canvas, preview) {
+      const ctx = canvas.getContext('2d');
+      const size = canvas.width;
+      const centerX = size / 2;
+      const centerY = size * 0.57;
+      const ranges = preview.coordinates?.range_m ?? [];
+      const azimuths = preview.coordinates?.azimuth_deg ?? [];
+      const values = preview.values ?? [];
+      const finiteRanges = ranges.filter(v => Number.isFinite(v));
+      const maxRange = Math.max(1, ...finiteRanges);
+      const scale = (size * 0.39) / maxRange;
+      const fieldName = String(preview.field?.name ?? '').toUpperCase();
+      const stats = preview.field?.stats ?? {};
+      const vmin = Number.isFinite(stats.min) ? stats.min : 0;
+      const vmax = Number.isFinite(stats.max) ? stats.max : 1;
+      const tilt = Math.cos((90 - state.sceneTiltDeg) * Math.PI / 180);
+
+      ctx.clearRect(0, 0, size, size);
+      ctx.fillStyle = '#070a12';
+      ctx.fillRect(0, 0, size, size);
+      ctx.save();
+      ctx.translate(centerX, centerY);
+      ctx.strokeStyle = 'rgba(120, 140, 170, 0.18)';
+      ctx.lineWidth = 1;
+      for (let r = maxRange / 4; r <= maxRange + 0.001; r += maxRange / 4) {
+        ctx.beginPath();
+        ctx.ellipse(0, 0, r * scale, r * scale * tilt, 0, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      for (let ri = 0; ri < values.length; ri++) {
+        const az = (Number(azimuths[ri]) || 0) * Math.PI / 180;
+        const sin = Math.sin(az);
+        const cos = Math.cos(az);
+        for (let gi = 0; gi < (values[ri] ?? []).length; gi++) {
+          const value = values[ri][gi];
+          if (value === null || value === undefined || !Number.isFinite(Number(value))) continue;
+          const range = Number(ranges[gi]);
+          if (!Number.isFinite(range)) continue;
+          const baseX = range * scale * sin;
+          const baseY = -range * scale * cos * tilt;
+          const h = valueHeightPx(value, vmin, vmax);
+          ctx.fillStyle = colorForField(fieldName, Number(value), vmin, vmax);
+          ctx.fillRect(baseX - 1.4, baseY - h - 1.4, 3, Math.max(3, h * 0.35 + 3));
+        }
+      }
+      ctx.restore();
+      ctx.fillStyle = 'rgba(7, 10, 18, 0.88)';
+      ctx.fillRect(0, 0, size, 72);
+      ctx.fillStyle = '#f7f8f8';
+      ctx.font = '13px Inter, system-ui';
+      ctx.fillText(`${preview.field?.name ?? 'field'} • 2.5D slab from observed gates`, 18, 24);
+      ctx.fillStyle = '#8a8f98';
+      ctx.font = '11px JetBrains Mono, monospace';
+      ctx.fillText('sampled gates only • not gridded • not a vertical retrieval', 18, 43);
+      ctx.fillText(`tilt ${fmtNumber(state.sceneTiltDeg, 0, '°')} • visual exaggeration ${fmtNumber(state.verticalExaggeration, 0, ' px')}`, 18, 60);
+    }
+
+    function drawScanSweepOverlay(canvas, preview) {
+      const ctx = canvas.getContext('2d');
+      const size = canvas.width;
+      const center = state.sceneMode === 'native-polar'
+        ? { x: size / 2, y: size / 2, yScale: 1 }
+        : { x: size / 2, y: size * 0.57, yScale: Math.cos((90 - state.sceneTiltDeg) * Math.PI / 180) };
+      const ranges = preview.coordinates?.range_m ?? [];
+      const maxRange = Math.max(1, ...ranges.filter(v => Number.isFinite(v)));
+      const radius = (state.sceneMode === 'native-polar' ? size * 0.43 : size * 0.39);
+      const az = (state.animationPhase - 90) * Math.PI / 180;
+      const sweepX = Math.cos(az) * radius;
+      const sweepY = Math.sin(az) * radius * center.yScale;
+      ctx.save();
+      ctx.strokeStyle = state.animationPlaying ? 'rgba(190, 190, 255, 0.86)' : 'rgba(190, 190, 255, 0.34)';
+      ctx.lineWidth = state.animationPlaying ? 2.2 : 1.2;
+      ctx.beginPath();
+      ctx.moveTo(center.x, center.y);
+      ctx.lineTo(center.x + sweepX, center.y + sweepY);
+      ctx.stroke();
+      ctx.fillStyle = '#8a8f98';
+      ctx.font = '10px JetBrains Mono, monospace';
+      ctx.fillText(`sweep cue ${fmtNumber(state.animationPhase, 0, '°')} • ${fmtNumber(maxRange / 1000, 0, ' km')}`, 18, size - 18);
+      ctx.restore();
     }
 
     function drawNativePolarPreview(canvas, preview) {

@@ -204,6 +204,23 @@ def test_viewer_uses_stacked_overlay_counts_and_clarifies_not_gridded():
     assert "visual guide grid only" in html
 
 
+def test_viewer_batches_animation_and_2_5d_controls_with_honesty_language():
+    html = VIEWER.read_text(encoding="utf-8")
+
+    assert "sceneMode" in html
+    assert "data-scene-mode" in html
+    assert "Native polar" in html
+    assert "2.5D slab" in html
+    assert "toggleAnimation" in html
+    assert "requestAnimationFrame" in html
+    assert "drawScanSweepOverlay" in html
+    assert "drawTwoPointFiveDSlabPreview" in html
+    assert "scene-tilt-slider" in html
+    assert "vertical-exaggeration-slider" in html
+    assert "not a vertical retrieval" in html
+    assert "observed gates extruded for visual emphasis" in html
+
+
 def test_viewer_layout_prevents_long_labels_from_jumping_tracks():
 
     html = VIEWER.read_text(encoding="utf-8")
