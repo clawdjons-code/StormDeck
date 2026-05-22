@@ -95,6 +95,15 @@ def test_viewer_rounds_numeric_field_values_for_operator_readability():
     assert "~" in html
 
 
+def test_viewer_derives_elevation_metadata_from_legacy_coordinate_arrays():
+    html = VIEWER.read_text(encoding="utf-8")
+
+    assert "deriveElevationDisplay(preview)" in html
+    assert "preview.coordinates?.elevation_deg" in html
+    assert "roundTenth" in html
+    assert "fixed_angle_label" in html
+
+
 def test_viewer_layout_prevents_long_labels_from_jumping_tracks():
     html = VIEWER.read_text(encoding="utf-8")
 
