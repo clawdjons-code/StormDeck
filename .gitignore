@@ -1,0 +1,16 @@
+# Python/runtime caches
+__pycache__/
+.pytest_cache/
+*.py[cod]
+
+# Local radar data and generated artifacts
+# Keep sample radar files off git unless deliberately moved to Git LFS or a release asset.
+data/
+renders/
+stormdeck_case_probe_export/
+
+# Local environment files
+.venv/
+venv/
+.env
+.DS_Store
