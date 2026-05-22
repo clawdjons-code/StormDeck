@@ -29,25 +29,25 @@ Install dependencies on the target workstation:
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-python -m pip install -r requirements.txt
+python3 -m pip install -r requirements.txt
 ```
 
 Run the lightweight tests without radar data:
 
 ```bash
-python -m pytest -q
+python3 -m pytest -q
 ```
 
 Run the case probe against a local CfRadial file:
 
 ```bash
-python scripts/stormdeck_case_probe.py /path/to/cfrad-file.nc --out stormdeck_case_probe_export
+python3 scripts/stormdeck_case_probe.py /path/to/cfrad-file.nc --out stormdeck_case_probe_export
 ```
 
 Build the smaller engine-facing volume index from the generated probe manifest:
 
 ```bash
-python scripts/stormdeck_volume_index.py stormdeck_case_probe_export/<case-name>/manifest.json
+python3 scripts/stormdeck_volume_index.py stormdeck_case_probe_export/<case-name>/manifest.json
 ```
 
 Known better-quality `wea-fs` validation input:
