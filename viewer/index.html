@@ -159,13 +159,16 @@
     ul.clean li { padding: 10px; border: 1px solid var(--border-soft); border-radius: 10px; color: var(--silver); background: rgba(255,255,255,.018); }
 
     .quarantine-row { font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+    .field-preview-grid { display: grid; grid-template-columns: minmax(320px, 1fr) 360px; gap: 16px; align-items: stretch; }
+    .radar-canvas-wrap { min-height: 420px; border: 1px solid var(--border-soft); border-radius: 14px; background: rgba(0,0,0,.22); display: grid; place-items: center; overflow: hidden; }
+    #field-preview-canvas { width: 100%; max-width: 620px; aspect-ratio: 1 / 1; }
     .danger { color: #ffb4b4; }
     .muted { color: var(--muted); }
     .accent { color: #bebeff; }
     footer { color: var(--dim); padding: 22px 0 4px; font-size: 12px; }
 
     @media (max-width: 1100px) {
-      .hero, .grid { grid-template-columns: 1fr; }
+      .hero, .grid, .field-preview-grid { grid-template-columns: 1fr; }
       .file-grid { grid-template-columns: 1fr; }
       header { align-items: flex-start; flex-direction: column; }
       .source-strip { justify-content: flex-start; }
@@ -178,7 +181,7 @@
       <div class="mark">SD</div>
       <div>
         <h1>StormDeck Replay Cockpit</h1>
-        <div class="subtitle">Observed metadata only • stormdeck.case_timeline.v0 • stormdeck.temporal_tracks.v0 • stormdeck.change_summary.v0</div>
+        <div class="subtitle">Observed metadata plus optional field sample • stormdeck.case_timeline.v0 • stormdeck.temporal_tracks.v0 • stormdeck.change_summary.v0 • stormdeck.field_preview.v0</div>
       </div>
     </div>
     <div id="source-status" class="source-strip" aria-live="polite">
@@ -193,7 +196,7 @@
     <section class="hero">
       <div class="panel">
         <h2>Replay truth before radar theater.</h2>
-        <p>This scaffold loads the metadata exports from <span class="mono">wea-fs</span> and turns them into an operational cockpit shell: timeline summary, comparable tracks, quarantine/debug lane, warnings, provenance, scan age, and a first “what changed” panel. Radar field deltas not computed. No fake 3D. Refreshingly unglamorous.</p>
+        <p>This scaffold loads the metadata exports from <span class="mono">wea-fs</span> and turns them into an operational cockpit shell: timeline summary, comparable tracks, quarantine/debug lane, warnings, provenance, scan age, and a first “what changed” panel. Observed metadata only remains the default safety posture; a fourth optional export adds an observed radar field sample as a native polar sweep. Radar field deltas not computed. No fake 3D. Refreshingly unglamorous.</p>
         <div class="source-strip">
           <span class="pill good">Compare only within the same track</span>
           <span class="pill">Native RHI is first-class</span>
@@ -206,6 +209,7 @@
           <label class="file-card"><span>case_timeline.json</span><input type="file" accept="application/json,.json" data-json-role="case_timeline"></label>
           <label class="file-card"><span>temporal_tracks.json</span><input type="file" accept="application/json,.json" data-json-role="temporal_tracks"></label>
           <label class="file-card"><span>change_summary.json</span><input type="file" accept="application/json,.json" data-json-role="change_summary"></label>
+          <label class="file-card"><span>field_preview.json</span><input type="file" accept="application/json,.json" data-json-role="field_preview"></label>
         </div>
         <p class="muted">Expected path shape: <span class="mono">/data/stormdeck/exports/20260402_031550/*.json</span>. Browser security requires selecting local files or serving this viewer from the export directory.</p>
       </div>
@@ -248,11 +252,28 @@
       </aside>
     </section>
 
+    <section class="panel" id="field-preview" style="margin-top:18px;">
+      <div class="section-title"><h3>Observed radar field sample</h3><span class="mono">stormdeck.field_preview.v0</span></div>
+      <div class="field-preview-grid">
+        <div class="radar-canvas-wrap">
+          <canvas id="field-preview-canvas" width="620" height="620" aria-label="native polar sweep field preview"></canvas>
+        </div>
+        <div>
+          <div id="field-preview-summary">
+            <ul class="clean">
+              <li>Load field_preview.json to draw a native polar sweep of observed gates.</li>
+              <li>Not a gridded volume. Not 3D. Not a field-value delta.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <footer>StormDeck metadata cockpit scaffold • observed data and inferred classifications are intentionally separated • operational clarity over cinematic effects.</footer>
   </main>
 
   <script>
-    const state = { case_timeline: null, temporal_tracks: null, change_summary: null, selectedTrackId: null };
+    const state = { case_timeline: null, temporal_tracks: null, change_summary: null, field_preview: null, selectedTrackId: null };
 
     document.querySelectorAll('input[type="file"][data-json-role]').forEach(input => {
       input.addEventListener('change', event => {
@@ -288,16 +309,17 @@
       renderTrackList();
       renderChangePanel();
       renderQuarantineLane();
+      renderFieldPreview();
     }
 
     function renderSourceStatus() {
-      const loaded = Object.entries(state).filter(([, value]) => value).map(([key]) => key);
+      const loaded = ['case_timeline', 'temporal_tracks', 'change_summary', 'field_preview'].filter(key => state[key]);
       const status = document.getElementById('source-status');
       status.innerHTML = `
-        <span class="pill ${loaded.length === 3 ? 'good' : 'warn'}">${loaded.length}/3 exports loaded</span>
+        <span class="pill ${loaded.length >= 3 ? 'good' : 'warn'}">${loaded.length}/4 exports loaded</span>
         <span class="pill">data source: local JSON</span>
-        <span class="pill">confidence: metadata-safe</span>
-        <span class="pill">uncertainty: radar arrays not read</span>
+        <span class="pill">confidence: ${state.field_preview ? 'observed field sample' : 'metadata-safe'}</span>
+        <span class="pill">uncertainty: ${state.field_preview ? 'sampled radar arrays; no interpolation' : 'radar arrays not read'}</span>
       `;
     }
 
@@ -397,10 +419,123 @@
       `;
     }
 
+    function renderFieldPreview() {
+      const preview = state.field_preview;
+      const summary = document.getElementById('field-preview-summary');
+      const canvas = document.getElementById('field-preview-canvas');
+      if (!preview) {
+        clearCanvas(canvas, 'Load field_preview.json');
+        summary.innerHTML = `
+          <ul class="clean">
+            <li>Load field_preview.json to draw a native polar sweep of observed gates.</li>
+            <li>Not a gridded volume. Not 3D. Not a field-value delta.</li>
+          </ul>`;
+        return;
+      }
+      drawNativePolarPreview(canvas, preview);
+      const stats = preview.field?.stats ?? {};
+      const sampling = preview.sampling ?? {};
+      summary.innerHTML = `
+        <ul class="clean">
+          <li>Field: <span class="accent">${escapeHtml(preview.field?.name)}</span> ${escapeHtml(preview.field?.units || '')}</li>
+          <li>Sweep: <span class="mono">${escapeHtml(preview.sweep?.name)}</span> • native polar sweep • observed gates</li>
+          <li>Samples: ${fmt(sampling.sampled_ray_count)} rays × ${fmt(sampling.sampled_gate_count)} gates from ${fmt(preview.sweep?.ray_count)} × ${fmt(preview.sweep?.gate_count)}</li>
+          <li>Range: ${fmt(stats.min)} to ${fmt(stats.max)} • valid gates ${fmt(stats.valid_gate_count)} • missing gates ${fmt(stats.missing_gate_count)}</li>
+          <li>Data source: ${escapeHtml(preview.source?.path)}. Confidence: observed radar field sample. Uncertainty: sampled arrays only; not a gridded volume, not 3D, and not a field-value delta.</li>
+          ${(preview.warnings ?? []).map(w => `<li>${escapeHtml(w)}</li>`).join('')}
+        </ul>`;
+    }
+
+    function clearCanvas(canvas, label) {
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#070a12';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#8a8f98';
+      ctx.font = '14px JetBrains Mono, monospace';
+      ctx.fillText(label, 24, 36);
+    }
+
+    function drawNativePolarPreview(canvas, preview) {
+      const ctx = canvas.getContext('2d');
+      const size = canvas.width;
+      const center = size / 2;
+      const ranges = preview.coordinates?.range_m ?? [];
+      const azimuths = preview.coordinates?.azimuth_deg ?? [];
+      const values = preview.values ?? [];
+      const finiteRanges = ranges.filter(v => Number.isFinite(v));
+      const maxRange = Math.max(1, ...finiteRanges);
+      const scale = (size * 0.43) / maxRange;
+      const fieldName = String(preview.field?.name ?? '').toUpperCase();
+      const stats = preview.field?.stats ?? {};
+      const vmin = Number.isFinite(stats.min) ? stats.min : 0;
+      const vmax = Number.isFinite(stats.max) ? stats.max : 1;
+
+      ctx.clearRect(0, 0, size, size);
+      ctx.fillStyle = '#070a12';
+      ctx.fillRect(0, 0, size, size);
+      ctx.strokeStyle = 'rgba(120, 140, 170, 0.22)';
+      ctx.lineWidth = 1;
+      for (let r = maxRange / 4; r <= maxRange + 0.001; r += maxRange / 4) {
+        ctx.beginPath();
+        ctx.arc(center, center, r * scale, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.strokeStyle = 'rgba(120, 140, 170, 0.18)';
+      ctx.beginPath(); ctx.moveTo(center, 32); ctx.lineTo(center, size - 32); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(32, center); ctx.lineTo(size - 32, center); ctx.stroke();
+
+      for (let ri = 0; ri < values.length; ri++) {
+        const az = (Number(azimuths[ri]) || 0) * Math.PI / 180;
+        const sin = Math.sin(az);
+        const cos = Math.cos(az);
+        for (let gi = 0; gi < (values[ri] ?? []).length; gi++) {
+          const value = values[ri][gi];
+          if (value === null || value === undefined || !Number.isFinite(Number(value))) continue;
+          const range = Number(ranges[gi]);
+          if (!Number.isFinite(range)) continue;
+          const x = center + range * scale * sin;
+          const y = center - range * scale * cos;
+          ctx.fillStyle = colorForField(fieldName, Number(value), vmin, vmax);
+          ctx.fillRect(x - 1, y - 1, 3, 3);
+        }
+      }
+      ctx.fillStyle = 'rgba(7, 10, 18, 0.88)';
+      ctx.fillRect(0, 0, size, 58);
+      ctx.fillStyle = '#f7f8f8';
+      ctx.font = '13px Inter, system-ui';
+      ctx.fillText(`${preview.field?.name ?? 'field'} • observed native polar sweep`, 18, 24);
+      ctx.fillStyle = '#8a8f98';
+      ctx.font = '11px JetBrains Mono, monospace';
+      ctx.fillText('sampled gates only • no gridding/interpolation • not 3D', 18, 43);
+    }
+
+    function colorForField(fieldName, value, vmin, vmax) {
+      if (['REF', 'DBZ', 'ZH'].includes(fieldName)) {
+        const stops = [[0, '#1d4ed8'], [20, '#22c55e'], [35, '#fde047'], [50, '#ef4444'], [65, '#e879f9']];
+        return colorRamp(value, stops);
+      }
+      const t = Math.max(0, Math.min(1, (value - vmin) / Math.max(0.001, vmax - vmin)));
+      const r = Math.round(60 + 180 * t);
+      const g = Math.round(100 + 80 * (1 - Math.abs(t - 0.5) * 2));
+      const b = Math.round(220 - 160 * t);
+      return `rgb(${r},${g},${b})`;
+    }
+
+    function colorRamp(value, stops) {
+      if (value <= stops[0][0]) return stops[0][1];
+      for (let i = 0; i < stops.length - 1; i++) {
+        if (value <= stops[i + 1][0]) return stops[i][1];
+      }
+      return stops[stops.length - 1][1];
+    }
+
     function escapeHtml(value) {
       return String(value ?? '').replace(/[&<>'"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));
     }
     function escapeAttr(value) { return escapeHtml(value).replace(/`/g, '&#96;'); }
+
+    renderAll();
   </script>
 </body>
 </html>

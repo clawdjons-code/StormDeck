@@ -22,6 +22,7 @@ The repository now includes a small Python prototype layer for archived ATD/KATD
 - `scripts/stormdeck_single_frame_preview.py` — first-pass single-frame preview renderer.
 - `scripts/stormdeck_3d_frame_render.py` — observed-gate 3D frame renderer for an actual radar sweep.
 - `scripts/stormdeck_case_probe.py` — grouped CfRadial case probe that classifies PPI sector/RHI geometry, summarizes fields, writes a manifest, and optionally exports quicklook PNGs.
+- `scripts/stormdeck_field_preview.py` — browser-safe `stormdeck.field_preview.v0` exporter for one observed native sweep field sample.
 - `tests/test_stormdeck_case_probe.py` — unit tests for geometry classification, range summaries, volume-type inference, and ATD missing-value masking.
 
 Install dependencies on the target workstation:
@@ -80,6 +81,16 @@ python3 scripts/stormdeck_change_summary.py \
 
 The change-summary exporter does not read radar arrays or compute reflectivity/velocity deltas. It reports same-track comparison windows, elapsed time, cadence status, and nearby quarantine events so the replay UI can show an honest first “what changed” panel.
 
+Export one observed radar field sample for the cockpit. This reads one CfRadial sweep, masks missing gates, downsamples the native ray/gate array for browser use, and does not grid or interpolate:
+
+```bash
+python3 scripts/stormdeck_field_preview.py \
+  /path/to/complete-volume.nc \
+  --field REF \
+  --sweep-index 0 \
+  --out /data/stormdeck/exports/20260402_031550/field_preview.json
+```
+
 Open the metadata replay cockpit scaffold:
 
 ```bash
@@ -92,7 +103,7 @@ Then open:
 http://localhost:8765/viewer/index.html
 ```
 
-Load `case_timeline.json`, `temporal_tracks.json`, and `change_summary.json` with the file pickers. The viewer intentionally displays observed metadata, pairing rules, scan age, provenance, confidence, uncertainty, warnings, temporal tracks, and the quarantine/debug lane; it does not render radar arrays yet.
+Load `case_timeline.json`, `temporal_tracks.json`, and `change_summary.json` with the file pickers. Optionally load `field_preview.json` to draw a sampled native polar sweep of observed gates. The viewer intentionally displays observed metadata, pairing rules, scan age, provenance, confidence, uncertainty, warnings, temporal tracks, and the quarantine/debug lane; the optional field preview is not a gridded volume, not 3D, and not a radar field delta.
 
 Or scan a CfRadial directory directly on `wea-fs`:
 

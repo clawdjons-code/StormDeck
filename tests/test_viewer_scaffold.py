@@ -54,7 +54,21 @@ def test_viewer_has_local_file_controls_for_wea_fs_exports():
     assert 'data-json-role="case_timeline"' in html
     assert 'data-json-role="temporal_tracks"' in html
     assert 'data-json-role="change_summary"' in html
+    assert 'data-json-role="field_preview"' in html
     assert "FileReader" in html
     assert "renderCaseSummary" in html
     assert "renderTrackList" in html
     assert "renderChangePanel" in html
+    assert "renderFieldPreview" in html
+
+
+def test_viewer_surfaces_observed_radar_field_preview_without_claiming_3d():
+    html = VIEWER.read_text(encoding="utf-8")
+
+    assert "stormdeck.field_preview.v0" in html
+    assert 'id="field-preview"' in html
+    assert 'id="field-preview-canvas"' in html
+    assert "Observed radar field sample" in html
+    assert "native polar sweep" in html
+    assert "not a gridded volume" in html
+    assert "drawNativePolarPreview" in html
