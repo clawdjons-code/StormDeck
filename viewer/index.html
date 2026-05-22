@@ -237,6 +237,7 @@
       <div id="provenance" class="panel">
         <div class="section-title"><h3>Load exports</h3><span class="mono">JSON</span></div>
         <div class="file-grid">
+          <label class="file-card"><span>stormdeck_case_manifest.json</span><input type="file" accept="application/json,.json" data-json-role="case_manifest"><small>stormdeck.case_manifest.v0</small></label>
           <label class="file-card"><span>case_timeline.json</span><input type="file" accept="application/json,.json" data-json-role="case_timeline"></label>
           <label class="file-card"><span>temporal_tracks.json</span><input type="file" accept="application/json,.json" data-json-role="temporal_tracks"></label>
           <label class="file-card"><span>change_summary.json</span><input type="file" accept="application/json,.json" data-json-role="change_summary"></label>
@@ -245,6 +246,10 @@
           <label class="file-card"><span>map_overlays.json</span><input type="file" accept="application/json,.json" data-json-role="map_overlays"></label>
         </div>
         <p class="muted">Expected path shape: <span class="mono">/data/stormdeck/exports/20260402_031550/*.json</span>. Browser security requires selecting local files or serving this viewer from the export directory.</p>
+        <div id="manifest-readiness" style="margin-top:14px;">
+          <div class="section-title"><h3>Cockpit readiness</h3><span class="mono">manifest auto-load</span></div>
+          <ul class="clean"><li>Load <span class="mono">stormdeck_case_manifest.json</span> to check bundle readiness and auto-load artifacts when served from the export directory.</li></ul>
+        </div>
       </div>
     </section>
 
@@ -341,6 +346,7 @@
 
   <script>
     const state = {
+      case_manifest: null,
       case_timeline: null,
       temporal_tracks: null,
       change_summary: null,
@@ -475,7 +481,29 @@
       button.addEventListener('click', () => setMapFocusMode(button.dataset.mapFocusMode));
     });
 
+    async function loadManifestArtifacts(manifest) {
+      const artifacts = manifest?.artifacts ?? {};
+      for (const [slot, artifact] of Object.entries(artifacts)) {
+        if (!artifact?.exists || artifact.status !== 'ready') continue;
+        const role = slot === 'field_preview' ? 'field_preview' : slot;
+        try {
+          const response = await fetch(artifact.relative_path, { cache: 'no-store' });
+          if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
+          ingestLoadedJson(role, await response.json());
+          artifact.viewer_load_status = 'loaded';
+        } catch (error) {
+          artifact.viewer_load_status = 'manual_selection_required';
+          artifact.viewer_load_error = error.message;
+        }
+      }
+    }
+
     function ingestLoadedJson(role, payload) {
+      if (payload?.schema === 'stormdeck.case_manifest.v0') {
+        state.case_manifest = payload;
+        loadManifestArtifacts(payload).then(renderAll);
+        return;
+      }
       if (payload?.schema === 'stormdeck.field_preview_playlist.v0') {
         state.field_preview_playlist = payload;
         state.field_preview = null;
@@ -531,6 +559,7 @@
 
     function renderAll() {
       renderSourceStatus();
+      renderManifestReadiness();
       renderCaseSummary();
       renderTrackList();
       renderChangePanel();
@@ -556,6 +585,33 @@
         <span class="pill">confidence: ${currentFieldPreview() ? 'observed field sample' : 'metadata-safe'}</span>
         <span class="pill">uncertainty: ${currentFieldPreview() ? 'sampled radar arrays; no interpolation' : 'radar arrays not read'}</span>
       `;
+    }
+
+    function renderManifestReadiness() {
+      const target = document.getElementById('manifest-readiness');
+      if (!target) return;
+      const manifest = state.case_manifest;
+      if (!manifest) {
+        target.innerHTML = `
+          <div class="section-title"><h3>Cockpit readiness</h3><span class="mono">manifest auto-load</span></div>
+          <ul class="clean"><li>Load <span class="mono">stormdeck_case_manifest.json</span> to check bundle readiness and auto-load artifacts when served from the export directory.</li></ul>`;
+        return;
+      }
+      const readiness = manifest.readiness ?? {};
+      const artifacts = Object.values(manifest.artifacts ?? {});
+      const statusClass = readiness.status === 'ready' ? 'good' : 'warn';
+      const rows = artifacts.map(artifact => {
+        const dot = artifact.status === 'ready' ? 'good' : (artifact.required ? 'danger' : 'warn');
+        const loaded = artifact.viewer_load_status === 'loaded' ? ' • loaded' : artifact.viewer_load_status === 'manual_selection_required' ? ' • manual selection required' : '';
+        return `<li><span class="status-dot ${dot}"></span>${escapeHtml(artifact.slot)}: <span class="mono">${escapeHtml(artifact.filename)}</span> • ${escapeHtml(artifact.status)}${loaded}</li>`;
+      }).join('');
+      target.innerHTML = `
+        <div class="section-title"><h3>Cockpit readiness</h3><span class="mono">stormdeck.case_manifest.v0</span></div>
+        <ul class="clean">
+          <li><span class="status-dot ${statusClass}"></span>Manifest readiness: <span class="mono">${escapeHtml(readiness.status)}</span> • ${fmt(readiness.loaded_export_count)}/${fmt(readiness.expected_export_count)} exports present • ${fmt(readiness.loaded_required_count)}/${fmt(readiness.required_count)} required ready.</li>
+          <li>Case: <span class="mono">${escapeHtml(manifest.case_id)}</span> • Source root: <span class="mono">${escapeHtml(manifest.source_root ?? 'not provided')}</span></li>
+          ${rows}
+        </ul>`;
     }
 
     function renderCaseSummary() {

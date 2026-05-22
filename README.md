@@ -123,6 +123,18 @@ python3 scripts/stormdeck_field_preview.py \
 
 Use `--scan-name` to keep one radar tasking strategy, `--playlist-sweep-name` when you need a specific selected sweep group, and `--strict-compatible-playlist` to fail fast instead of writing a misleading mixed playlist. Load that single `field_preview_playlist.json` once, then use **Play frames** or the frame scrubber without rearming the cockpit for every frame.
 
+Create a case manifest after the exports are in one directory:
+
+```bash
+python3 scripts/stormdeck_case_manifest.py \
+  --export-dir /data/stormdeck/exports/20260402_031550 \
+  --case-id 20260402_031550_supercell \
+  --source-root /home/atd_test/storm-deck-data/20260402_031550 \
+  --out /data/stormdeck/exports/20260402_031550/stormdeck_case_manifest.json
+```
+
+The manifest schema is `stormdeck.case_manifest.v0`. It records the expected cockpit artifacts, their schemas, readiness status, source root, and browser serving caveat. If the viewer is served from the same export directory, loading `stormdeck_case_manifest.json` can auto-fetch the referenced JSON artifacts. If the viewer is opened by `file://` or from a different directory, browser security may block auto-load; the readiness panel will still show which files are present and which must be selected manually.
+
 `map_overlays.json` is optional context data; the radar exporter does not create it directly. To test the layer immediately, load the committed sample file:
 
 ```text

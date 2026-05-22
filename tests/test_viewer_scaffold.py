@@ -5,6 +5,18 @@ ROOT = Path(__file__).resolve().parents[1]
 VIEWER = ROOT / "viewer" / "index.html"
 
 
+def test_viewer_loads_case_manifest_and_reports_readiness():
+    html = VIEWER.read_text(encoding="utf-8")
+
+    assert "stormdeck_case_manifest.json" in html
+    assert "stormdeck.case_manifest.v0" in html
+    assert "case_manifest" in html
+    assert "renderManifestReadiness" in html
+    assert "loadManifestArtifacts" in html
+    assert "Cockpit readiness" in html
+    assert "manifest auto-load" in html
+
+
 def test_viewer_scaffold_exists_and_loads_core_exports():
     html = VIEWER.read_text(encoding="utf-8")
 
