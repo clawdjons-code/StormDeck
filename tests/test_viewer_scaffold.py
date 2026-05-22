@@ -147,10 +147,10 @@ def test_viewer_reports_structured_overlay_layer_counts_and_legend():
 
     assert "countMapOverlayLayers" in html
     assert "renderOverlayLegend" in html
-    assert "Towns:" in html
-    assert "Warning corridors:" in html
-    assert "County boundaries:" in html
-    assert "State boundaries:" in html
+    assert "Towns</span>" in html
+    assert "Warning corridors</span>" in html
+    assert "County boundaries</span>" in html
+    assert "State boundaries</span>" in html
     assert "overlay-legend" in html
     assert "town point" in html
     assert "warning corridor" in html
@@ -190,6 +190,18 @@ def test_viewer_has_map_focus_mode_toggle_for_full_sector_and_local_impact():
     assert "setMapFocusMode" in html
     assert "full radar sector scale" in html
     assert "local impact scale" in html
+
+
+def test_viewer_uses_stacked_overlay_counts_and_clarifies_not_gridded():
+    html = VIEWER.read_text(encoding="utf-8")
+
+    assert "overlay-count-grid" in html
+    assert "Towns</span>" in html
+    assert "Warning corridors</span>" in html
+    assert "County boundaries</span>" in html
+    assert "State boundaries</span>" in html
+    assert "radar gates not gridded" in html
+    assert "visual guide grid only" in html
 
 
 def test_viewer_layout_prevents_long_labels_from_jumping_tracks():

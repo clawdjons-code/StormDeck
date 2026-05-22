@@ -171,6 +171,10 @@
     .map-context-wrap { min-height: 220px; border: 1px solid var(--border-soft); border-radius: 14px; background: rgba(0,0,0,.22); display: grid; place-items: center; overflow: hidden; }
     #map-context-canvas { width: 100%; max-width: 420px; aspect-ratio: 4 / 3; }
     .overlay-legend { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 10px; margin-top: 8px; font-size: 11px; color: var(--muted); }
+    .overlay-count-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 8px 0; }
+    .overlay-count-card { padding: 10px; border: 1px solid var(--border-soft); border-radius: 10px; background: rgba(255,255,255,.018); }
+    .overlay-count-card strong { display: block; font-size: 18px; color: var(--text); font-family: 'JetBrains Mono', ui-monospace, monospace; }
+    .overlay-count-card span { display: block; margin-top: 2px; font-size: 11px; color: var(--muted); }
     .legend-key { display: inline-flex; align-items: center; gap: 6px; min-width: 0; overflow-wrap: anywhere; }
     .overlay-swatch { width: 18px; height: 3px; border-radius: 999px; background: var(--swatch, #94a3b8); box-shadow: 0 0 0 1px rgba(255,255,255,0.08); }
     .overlay-dot { width: 7px; height: 7px; border-radius: 999px; background: var(--swatch, #f8fafc); }
@@ -737,9 +741,13 @@
         <span class="legend-key"><span class="overlay-swatch" style="--swatch:#64748b"></span>county boundary</span>
         <span class="legend-key"><span class="overlay-swatch" style="--swatch:#94a3b8"></span>state boundary</span>
       </div>
+      <div class="overlay-count-grid" aria-label="map overlay counts">
+        <div class="overlay-count-card"><strong>${fmt(counts.towns)}</strong><span>Towns</span></div>
+        <div class="overlay-count-card"><strong>${fmt(counts.warningCorridors)}</strong><span>Warning corridors</span></div>
+        <div class="overlay-count-card"><strong>${fmt(counts.countyBoundaries)}</strong><span>County boundaries</span></div>
+        <div class="overlay-count-card"><strong>${fmt(counts.stateBoundaries)}</strong><span>State boundaries</span></div>
+      </div>
       <ul class="clean">
-        <li>Towns: <span class="mono">${fmt(counts.towns)}</span> • Warning corridors: <span class="mono">${fmt(counts.warningCorridors)}</span></li>
-        <li>County boundaries: <span class="mono">${fmt(counts.countyBoundaries)}</span> • State boundaries: <span class="mono">${fmt(counts.stateBoundaries)}</span></li>
         <li>Town labels are decluttered; dots still indicate all loaded towns.</li>
       </ul>`;
     }
@@ -870,15 +878,15 @@
       ctx.fillText('radar site marker', 18, 26);
       ctx.fillStyle = '#8a8f98';
       ctx.font = '11px JetBrains Mono, monospace';
-      ctx.fillText('sector outline only • not gridded', 18, 44);
-      ctx.fillText('orientation sketch only • range rings approximate', 18, 60);
+      ctx.fillText('sector outline only • radar gates not gridded', 18, 44);
+      ctx.fillText('orientation sketch only • visual guide grid only', 18, 60);
       ctx.fillText(`${scale.mode} • ${fmtNumber(scale.rangeKm, 0, ' km view')}`, 18, 76);
       summary.innerHTML = `
         <ul class="clean">
           <li>Site: <span class="mono">${fmtNumber(site.latitude_deg, 3)}°, ${fmtNumber(site.longitude_deg, 3)}°</span> • altitude ${fmtNumber(site.altitude_m, 0, ' m')}</li>
           <li>Sector: <span class="mono">${fmtNumber(azMin, 1, '°')}–${fmtNumber(azMax, 1, '°')}</span> • max range ${fmtNumber((outline.range_max_m ?? 0) / 1000, 1, ' km')}</li>
-          <li>Geographic context is a radar site marker plus sector outline only; not gridded and not a map-projected gate field.</li>
-          <li>Orientation sketch only: cardinal labels, boundary bearings, and range rings aid readability but are not a projected basemap.</li>
+          <li>Geographic context is a radar site marker plus sector outline only; radar gates are not gridded and not a map-projected gate field.</li>
+          <li>Orientation sketch only: cardinal labels, boundary bearings, range rings, and the faint visual guide grid aid readability but are not a projected basemap.</li>
           <li>Sketch view: <span class="mono">${scale.mode}</span> over roughly <span class="mono">${fmtNumber(scale.rangeKm, 0, ' km')}</span>; use Full sector for radar reach and Local impact for nearby towns/corridors.</li>
           <li>Map overlays are context overlays only from <span class="mono">stormdeck.map_overlays.v0</span>; overlays do not grid or alter radar gates.</li>
           <li>Warning corridor geometry is schematic context; not an active warning product unless source metadata says so.</li>
