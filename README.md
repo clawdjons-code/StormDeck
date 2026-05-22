@@ -50,11 +50,13 @@ Build the smaller engine-facing volume index from the generated probe manifest:
 python3 scripts/stormdeck_volume_index.py stormdeck_case_probe_export/<case-name>/manifest.json
 ```
 
-Known better-quality `wea-fs` validation input:
+Known `wea-fs` validation input:
 
 ```text
 /home/atd_test/storm-deck-data/KATD_Base_Data_20260522_123630_436049100.nc
 ```
+
+Data provenance note: this validation file is simulator-produced data based on real weather data, not a fully public real-data release. Treat simulator artifacts and impurities as possible. Do not commit radar input files, generated quicklooks, or exported manifests unless they have been explicitly approved for public consumption.
 
 Local radar inputs and generated imagery are intentionally ignored by git under `data/`, `renders/`, and `stormdeck_case_probe_export/`.
 
