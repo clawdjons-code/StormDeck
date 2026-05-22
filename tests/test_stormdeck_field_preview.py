@@ -163,6 +163,102 @@ def test_builds_browser_safe_field_preview_playlist_contract():
     assert "not motion interpolation" in playlist["warnings"][0]
 
 
+def test_playlist_reports_mixed_scan_names_as_not_comparable():
+    mod = load_module()
+    ppi = mod.build_field_preview_from_arrays(
+        field=np.array([[1.0, 2.0], [3.0, 4.0]]),
+        range_m=np.array([1000.0, 2000.0]),
+        azimuth_deg=np.array([180.0, 181.0]),
+        elevation_deg=np.array([0.5, 0.5]),
+        field_name="REF",
+        source_path="/case/ppi.nc",
+        sweep_name="sweep_0",
+        scan_name="Supercell_Fast_Deg_Staggered_Test",
+        source_time="2026-04-02T03:15:50Z",
+    )
+    rhi = mod.build_field_preview_from_arrays(
+        field=np.array([[2.0, 4.0], [6.0, 8.0]]),
+        range_m=np.array([1000.0, 2000.0]),
+        azimuth_deg=np.array([210.0, 210.0]),
+        elevation_deg=np.array([0.5, 20.5]),
+        field_name="REF",
+        source_path="/case/rhi.nc",
+        sweep_name="sweep_0",
+        scan_name="RHI_LDR_Narrow_Sector",
+        source_time="2026-04-02T03:16:00Z",
+    )
+
+    playlist = mod.build_field_preview_playlist([ppi, rhi], case_id="mixed", field="REF")
+
+    compatibility = playlist["compatibility"]
+    assert compatibility["status"] == "mixed_non_comparable"
+    assert compatibility["scan_names"] == ["RHI_LDR_Narrow_Sector", "Supercell_Fast_Deg_Staggered_Test"]
+    assert compatibility["sweep_modes"] == ["ppi", "rhi"]
+    assert "Mixed scan names" in playlist["warnings"][1]
+    assert "filter by --scan-name" in playlist["warnings"][1]
+
+
+def test_filters_playlist_previews_by_scan_name_before_building_playlist():
+    mod = load_module()
+    keep = mod.build_field_preview_from_arrays(
+        field=np.ones((2, 2)),
+        range_m=np.array([1000.0, 2000.0]),
+        azimuth_deg=np.array([180.0, 181.0]),
+        elevation_deg=np.array([0.5, 0.5]),
+        field_name="REF",
+        source_path="/case/keep.nc",
+        sweep_name="sweep_0",
+        scan_name="Supercell_Fast_Deg_Staggered_Test",
+    )
+    drop = mod.build_field_preview_from_arrays(
+        field=np.ones((2, 2)),
+        range_m=np.array([1000.0, 2000.0]),
+        azimuth_deg=np.array([210.0, 210.0]),
+        elevation_deg=np.array([0.5, 20.5]),
+        field_name="REF",
+        source_path="/case/drop.nc",
+        sweep_name="sweep_0",
+        scan_name="RHI_LDR_Narrow_Sector",
+    )
+
+    filtered = mod.filter_playlist_previews([keep, drop], scan_name="Supercell_Fast_Deg_Staggered_Test")
+    playlist = mod.build_field_preview_playlist(filtered, case_id="ppi-only", field="REF")
+
+    assert [frame["source_path"] for frame in playlist["frames"]] == ["/case/keep.nc"]
+    assert playlist["compatibility"]["status"] == "homogeneous_comparable"
+
+
+def test_strict_playlist_compatibility_rejects_mixed_scan_names():
+    mod = load_module()
+    first = mod.build_field_preview_from_arrays(
+        field=np.ones((2, 2)),
+        range_m=np.array([1000.0, 2000.0]),
+        azimuth_deg=np.array([180.0, 181.0]),
+        elevation_deg=np.array([0.5, 0.5]),
+        field_name="REF",
+        source_path="/case/a.nc",
+        sweep_name="sweep_0",
+        scan_name="A",
+    )
+    second = mod.build_field_preview_from_arrays(
+        field=np.ones((2, 2)),
+        range_m=np.array([1000.0, 2000.0]),
+        azimuth_deg=np.array([180.0, 181.0]),
+        elevation_deg=np.array([0.5, 0.5]),
+        field_name="REF",
+        source_path="/case/b.nc",
+        sweep_name="sweep_0",
+        scan_name="B",
+    )
+
+    try:
+        mod.build_field_preview_playlist([first, second], strict_compatible=True)
+    except ValueError as exc:
+        assert "Mixed scan names" in str(exc)
+    else:
+        raise AssertionError("expected strict compatibility rejection")
+
+
 def test_rejects_mismatched_geometry_lengths():
     mod = load_module()
 

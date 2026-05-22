@@ -300,11 +300,76 @@ def build_field_preview_from_arrays(
     }
 
 
+def infer_sweep_mode(preview: Dict[str, Any]) -> str:
+    display = preview.get("display_metadata", {})
+    el_min = display.get("elevation_min_deg")
+    el_max = display.get("elevation_max_deg")
+    az_min = display.get("azimuth_min_deg")
+    az_max = display.get("azimuth_max_deg")
+    try:
+        el_span = abs(float(el_max) - float(el_min)) if el_min is not None and el_max is not None else 0.0
+        az_span = abs(float(az_max) - float(az_min)) if az_min is not None and az_max is not None else 0.0
+    except (TypeError, ValueError):
+        return "unknown"
+    return "rhi" if el_span > az_span else "ppi"
+
+
+def unique_sorted(values: List[Any]) -> List[str]:
+    return sorted({str(value) for value in values if value not in (None, "")})
+
+
+def playlist_compatibility(previews: List[Dict[str, Any]]) -> Dict[str, Any]:
+    scan_names = unique_sorted([preview.get("display_metadata", {}).get("scan_name") for preview in previews])
+    sweep_names = unique_sorted([preview.get("sweep", {}).get("name") for preview in previews])
+    sweep_modes = unique_sorted([infer_sweep_mode(preview) for preview in previews])
+    sampled_geometries = unique_sorted([
+        f"{preview.get('sampling', {}).get('sampled_ray_count')}x{preview.get('sampling', {}).get('sampled_gate_count')}"
+        for preview in previews
+    ])
+    mixed_reasons: List[str] = []
+    if len(scan_names) > 1:
+        mixed_reasons.append("Mixed scan names")
+    if len(sweep_modes) > 1:
+        mixed_reasons.append("Mixed sweep modes")
+    if len(sampled_geometries) > 1:
+        mixed_reasons.append("Mixed sampled geometries")
+    return {
+        "status": "mixed_non_comparable" if mixed_reasons else "homogeneous_comparable",
+        "scan_names": scan_names,
+        "sweep_names": sweep_names,
+        "sweep_modes": sweep_modes,
+        "sampled_geometries": sampled_geometries,
+        "mixed_reasons": mixed_reasons,
+        "operator_note": (
+            "Playlist mixes scan strategies; frame playback is a browsing aid, not comparable storm motion."
+            if mixed_reasons
+            else "Playlist frames share scan-name/sweep-mode compatibility checks for first-pass browsing."
+        ),
+    }
+
+
+def filter_playlist_previews(
+    previews: List[Dict[str, Any]],
+    *,
+    scan_name: Optional[str] = None,
+    sweep_name: Optional[str] = None,
+) -> List[Dict[str, Any]]:
+    filtered = []
+    for preview in previews:
+        if scan_name and preview.get("display_metadata", {}).get("scan_name") != scan_name:
+            continue
+        if sweep_name and preview.get("sweep", {}).get("name") != sweep_name:
+            continue
+        filtered.append(preview)
+    return filtered
+
+
 def build_field_preview_playlist(
     previews: List[Dict[str, Any]],
     *,
     case_id: Optional[str] = None,
     field: Optional[str] = None,
+    strict_compatible: bool = False,
 ) -> Dict[str, Any]:
     """Build a browser-safe frame playlist for scrubber/playback previews."""
     frames: List[Dict[str, Any]] = []
@@ -322,6 +387,16 @@ def build_field_preview_playlist(
                 "preview": preview,
             }
         )
+    compatibility = playlist_compatibility(previews)
+    if strict_compatible and compatibility["status"] != "homogeneous_comparable":
+        raise ValueError(f"{', '.join(compatibility['mixed_reasons'])}; filter by --scan-name/--sweep-name or disable --strict-compatible-playlist")
+    warnings = [
+        "Observed-gate frame playlist only; not motion interpolation, not a gridded volume, and not a vertical retrieval."
+    ]
+    if compatibility["status"] != "homogeneous_comparable":
+        warnings.append(
+            f"{'; '.join(compatibility['mixed_reasons'])}; filter by --scan-name/--sweep-name before treating frames as comparable motion."
+        )
     return {
         "schema": "stormdeck.field_preview_playlist.v0",
         "case_id": case_id,
@@ -337,9 +412,8 @@ def build_field_preview_playlist(
             "enable_scrubber": True,
             "enable_previous_frame_ghost": True,
         },
-        "warnings": [
-            "Observed-gate frame playlist only; not motion interpolation, not a gridded volume, and not a vertical retrieval."
-        ],
+        "compatibility": compatibility,
+        "warnings": warnings,
     }
 
 
@@ -430,6 +504,9 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser.add_argument("--out", required=True, help="Output field_preview.json or field_preview_playlist.json path")
     parser.add_argument("--field", default="REF", help="Field alias or variable name, e.g. REF, DBZ, VEL")
     parser.add_argument("--case-id", default=None, help="Case identifier for playlist exports")
+    parser.add_argument("--scan-name", default=None, help="Keep only previews whose CfRadial scan_name matches this value")
+    parser.add_argument("--playlist-sweep-name", default=None, help="Keep only previews whose selected sweep group name matches this value")
+    parser.add_argument("--strict-compatible-playlist", action="store_true", help="Fail instead of writing a mixed/non-comparable scan playlist")
     parser.add_argument("--playlist", action="store_true", help="Write stormdeck.field_preview_playlist.v0 containing all input frames")
     parser.add_argument("--sweep", default=None, help="Sweep group name, e.g. sweep_0")
     parser.add_argument("--sweep-index", type=int, default=0, help="Sweep index if --sweep is omitted")
@@ -448,8 +525,16 @@ def main(argv: Optional[List[str]] = None) -> int:
         )
         for input_path in args.input
     ]
+    previews = filter_playlist_previews(previews, scan_name=args.scan_name, sweep_name=args.playlist_sweep_name)
+    if not previews:
+        raise SystemExit("No previews remain after --scan-name/--playlist-sweep-name filtering.")
     if args.playlist or len(previews) > 1:
-        payload = build_field_preview_playlist(previews, case_id=args.case_id, field=args.field)
+        payload = build_field_preview_playlist(
+            previews,
+            case_id=args.case_id,
+            field=args.field,
+            strict_compatible=args.strict_compatible_playlist,
+        )
         label = "field preview playlist"
     else:
         payload = previews[0]

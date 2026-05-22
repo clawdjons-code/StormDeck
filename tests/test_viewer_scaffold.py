@@ -233,6 +233,26 @@ def test_viewer_accepts_playlist_schema_from_either_field_picker_and_disables_si
     assert "if ((state.field_preview_playlist?.frames?.length ?? 0) < 2)" in html
 
 
+def test_viewer_counts_single_preview_or_playlist_as_one_field_export_option():
+    html = VIEWER.read_text(encoding="utf-8")
+
+    assert "fieldExportLoaded" in html
+    assert "requiredExportCount = 5" in html
+    assert "field_preview or field_preview_playlist" in html
+    assert "${requiredExportCount} exports loaded" in html
+
+
+def test_viewer_flags_mixed_scan_playlist_as_non_comparable():
+    html = VIEWER.read_text(encoding="utf-8")
+
+    assert "playlistCompatibility" in html
+    assert "mixed_non_comparable" in html
+    assert "Mixed scan playlist" in html
+    assert "not comparable motion" in html
+    assert "filter by --scan-name" in html
+    assert "scan-name-filter" in html
+
+
 def test_viewer_batches_animation_and_2_5d_controls_with_honesty_language():
     html = VIEWER.read_text(encoding="utf-8")
 

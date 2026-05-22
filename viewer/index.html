@@ -539,10 +539,19 @@
     }
 
     function renderSourceStatus() {
-      const loaded = ['case_timeline', 'temporal_tracks', 'change_summary', 'field_preview', 'field_preview_playlist', 'map_overlays'].filter(key => state[key]);
+      const fieldExportLoaded = Boolean(state.field_preview || state.field_preview_playlist);
+      const requiredExportCount = 5;
+      const loaded = [
+        state.case_timeline,
+        state.temporal_tracks,
+        state.change_summary,
+        fieldExportLoaded,
+        state.map_overlays,
+      ].filter(Boolean);
       const status = document.getElementById('source-status');
       status.innerHTML = `
-        <span class="pill ${loaded.length >= 3 ? 'good' : 'warn'}">${loaded.length}/6 exports loaded</span>
+        <span class="pill ${loaded.length >= 3 ? 'good' : 'warn'}">${loaded.length}/${requiredExportCount} exports loaded</span>
+        <span class="pill">field export: field_preview or field_preview_playlist</span>
         <span class="pill">data source: local JSON</span>
         <span class="pill">confidence: ${currentFieldPreview() ? 'observed field sample' : 'metadata-safe'}</span>
         <span class="pill">uncertainty: ${currentFieldPreview() ? 'sampled radar arrays; no interpolation' : 'radar arrays not read'}</span>
@@ -645,6 +654,19 @@
       `;
     }
 
+    function playlistCompatibility() {
+      return state.field_preview_playlist?.compatibility ?? { status: 'single_frame_or_unknown', mixed_reasons: [] };
+    }
+
+    function renderPlaylistCompatibilityCard() {
+      const compatibility = playlistCompatibility();
+      if (!state.field_preview_playlist) return '';
+      if (compatibility.status !== 'mixed_non_comparable') {
+        return `<li>Playlist compatibility: <span class="status-dot good"></span>homogeneous comparable scan strategy for first-pass browsing.</li>`;
+      }
+      return `<li><span class="status-dot danger"></span>Mixed scan playlist: ${escapeHtml((compatibility.mixed_reasons ?? []).join(', ') || 'mixed scan strategies')}; playback is for browsing only, not comparable motion. Re-export/filter by --scan-name or --playlist-sweep-name. <span id="scan-name-filter" class="mono">filter by --scan-name</span></li>`;
+    }
+
     function renderFieldPreview() {
       const preview = currentFieldPreview();
       const summary = document.getElementById('field-preview-summary');
@@ -685,6 +707,7 @@
           <li>Field: <span class="accent">${escapeHtml(preview.field?.name)}</span> ${escapeHtml(preview.field?.units || '')}</li>
           <li>Scan: <span class="mono">${escapeHtml(display.scan_name ?? preview.source?.scan_name ?? 'unknown')}</span></li>
           <li>Frame: <span class="mono">${state.field_preview_playlist ? `${state.currentFrameIndex + 1}/${state.field_preview_playlist.frames?.length ?? 0} playlist loaded` : 'single preview'}</span> • Time: <span class="mono">${escapeHtml(shortTime(display.time_coverage_start ?? preview.source?.time_coverage_start))}</span></li>
+          ${renderPlaylistCompatibilityCard()}
           <li>Elevation: <span class="mono">${escapeHtml(display.fixed_angle_label ?? 'unknown')}</span> • Sweep: <span class="mono">${escapeHtml(preview.sweep?.name)}</span></li>
           <li>Elevation span: <span class="mono">${fmtNumber(display.elevation_min_deg, 1, '°')}–${fmtNumber(display.elevation_max_deg, 1, '°')}</span> • median <span class="mono">${fmtNumber(display.elevation_median_deg, 1, '°')}</span> • strategy precision 0.1° • ~ means rounded/jittered</li>
           <li>Radials: ${fmt(display.radial_count ?? preview.sweep?.ray_count)} • Samples: ${fmt(sampling.sampled_ray_count)} rays × ${fmt(sampling.sampled_gate_count)} gates from ${fmt(preview.sweep?.ray_count)} × ${fmt(preview.sweep?.gate_count)}</li>
@@ -1089,10 +1112,12 @@
       const modeLabel = state.sceneMode === 'native-polar' ? 'Native polar' : '2.5D slab';
       const frames = state.field_preview_playlist?.frames ?? [];
       const delta = computeFrameDeltaStats(previousFieldPreview(), preview);
+      const compatibility = playlistCompatibility();
+      const comparableText = compatibility.status === 'mixed_non_comparable' ? 'mixed/non-comparable scan strategy; frame playback is browsing, not comparable motion' : 'homogeneous/comparable scan strategy check passed';
       status.innerHTML = `
         <ul class="clean">
           <li>${modeLabel}: observed gates only; no invented interpolation, no volumetric reconstruction.</li>
-          <li>Frame playlist: ${frames.length ? `${state.currentFrameIndex + 1}/${frames.length}` : 'single frame'}; ${state.framePlaybackPlaying ? 'playing frames' : 'paused frames'}; not motion interpolation.</li>
+          <li>Frame playlist: ${frames.length ? `${state.currentFrameIndex + 1}/${frames.length}` : 'single frame'}; ${state.framePlaybackPlaying ? 'playing frames' : 'paused frames'}; ${comparableText}; not motion interpolation.</li>
           <li>Change ghost: ${delta ? `${fmt(delta.changedGateCount)} sampled gates changed; mean Δ ${fmtNumber(delta.meanAbsDelta, 1)}` : 'load a frame playlist and advance past frame 1 to compare previous sampled gates'}.</li>
           <li>Animation: ${state.animationPlaying ? 'playing scan sweep overlay' : 'paused scan sweep overlay'} at <span class="mono">${fmtNumber(state.animationPhase, 0, '°')}</span>. Sweep overlay is a temporal/orientation cue, not a new frame.</li>
           <li>2.5D slab: observed gates extruded for visual emphasis from ${fmtNumber(stats.min, 1)} to ${fmtNumber(stats.max, 1)}; not a vertical retrieval.</li>
