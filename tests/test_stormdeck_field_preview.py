@@ -118,6 +118,51 @@ def test_labels_ppi_elevation_to_tenth_degree_despite_float_jitter():
     assert display["elevation_max_deg"] == 0.6
 
 
+def test_builds_browser_safe_field_preview_playlist_contract():
+    mod = load_module()
+    first = mod.build_field_preview_from_arrays(
+        field=np.array([[1.0, 2.0], [3.0, 4.0]]),
+        range_m=np.array([1000.0, 2000.0]),
+        azimuth_deg=np.array([180.0, 181.0]),
+        elevation_deg=np.array([0.5, 0.5]),
+        field_name="REF",
+        field_units="dBZ",
+        source_path="/case/frame_000.nc",
+        sweep_name="sweep_0",
+        source_time="2026-04-02T03:15:50Z",
+    )
+    second = mod.build_field_preview_from_arrays(
+        field=np.array([[2.0, 4.0], [6.0, 8.0]]),
+        range_m=np.array([1000.0, 2000.0]),
+        azimuth_deg=np.array([182.0, 183.0]),
+        elevation_deg=np.array([0.5, 0.5]),
+        field_name="REF",
+        field_units="dBZ",
+        source_path="/case/frame_001.nc",
+        sweep_name="sweep_0",
+        source_time="2026-04-02T03:15:58Z",
+    )
+
+    playlist = mod.build_field_preview_playlist(
+        [first, second],
+        case_id="20260402_031550_supercell",
+        field="REF",
+    )
+
+    assert playlist["schema"] == "stormdeck.field_preview_playlist.v0"
+    assert playlist["case_id"] == "20260402_031550_supercell"
+    assert playlist["field"] == "REF"
+    assert playlist["frame_count"] == 2
+    assert playlist["timeline"]["start_time"] == "2026-04-02T03:15:50Z"
+    assert playlist["timeline"]["end_time"] == "2026-04-02T03:15:58Z"
+    assert playlist["frames"][0]["frame_index"] == 0
+    assert playlist["frames"][1]["frame_index"] == 1
+    assert playlist["frames"][1]["previous_frame_index"] == 0
+    assert playlist["frames"][1]["preview"]["values"] == [[2.0, 4.0], [6.0, 8.0]]
+    assert "frame playlist" in playlist["warnings"][0]
+    assert "not motion interpolation" in playlist["warnings"][0]
+
+
 def test_rejects_mismatched_geometry_lengths():
     mod = load_module()
 

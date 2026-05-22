@@ -300,6 +300,49 @@ def build_field_preview_from_arrays(
     }
 
 
+def build_field_preview_playlist(
+    previews: List[Dict[str, Any]],
+    *,
+    case_id: Optional[str] = None,
+    field: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Build a browser-safe frame playlist for scrubber/playback previews."""
+    frames: List[Dict[str, Any]] = []
+    times: List[str] = []
+    for index, preview in enumerate(previews):
+        source_time = preview.get("source", {}).get("time_coverage_start")
+        if source_time:
+            times.append(str(source_time))
+        frames.append(
+            {
+                "frame_index": index,
+                "previous_frame_index": index - 1 if index > 0 else None,
+                "time_coverage_start": source_time,
+                "source_path": preview.get("source", {}).get("path"),
+                "preview": preview,
+            }
+        )
+    return {
+        "schema": "stormdeck.field_preview_playlist.v0",
+        "case_id": case_id,
+        "field": field or (previews[0].get("field", {}).get("name") if previews else None),
+        "frame_count": len(frames),
+        "timeline": {
+            "start_time": times[0] if times else None,
+            "end_time": times[-1] if times else None,
+        },
+        "frames": frames,
+        "viewer_hints": {
+            "default_view": "two_point_five_d_slab",
+            "enable_scrubber": True,
+            "enable_previous_frame_ghost": True,
+        },
+        "warnings": [
+            "Observed-gate frame playlist only; not motion interpolation, not a gridded volume, and not a vertical retrieval."
+        ],
+    }
+
+
 def _require_dataset() -> Any:
     try:
         from netCDF4 import Dataset  # type: ignore
@@ -382,28 +425,39 @@ def build_field_preview_from_cfradial(
 
 
 def main(argv: Optional[List[str]] = None) -> int:
-    parser = argparse.ArgumentParser(description="Export stormdeck.field_preview.v0 JSON from one CfRadial sweep.")
-    parser.add_argument("input", help="Input CfRadial .nc file")
-    parser.add_argument("--out", required=True, help="Output field_preview.json path")
+    parser = argparse.ArgumentParser(description="Export stormdeck.field_preview.v0 JSON or stormdeck.field_preview_playlist.v0 JSON from CfRadial sweeps.")
+    parser.add_argument("input", nargs="+", help="Input CfRadial .nc file(s), in frame order")
+    parser.add_argument("--out", required=True, help="Output field_preview.json or field_preview_playlist.json path")
     parser.add_argument("--field", default="REF", help="Field alias or variable name, e.g. REF, DBZ, VEL")
+    parser.add_argument("--case-id", default=None, help="Case identifier for playlist exports")
+    parser.add_argument("--playlist", action="store_true", help="Write stormdeck.field_preview_playlist.v0 containing all input frames")
     parser.add_argument("--sweep", default=None, help="Sweep group name, e.g. sweep_0")
     parser.add_argument("--sweep-index", type=int, default=0, help="Sweep index if --sweep is omitted")
     parser.add_argument("--max-rays", type=int, default=240, help="Maximum sampled rays in browser JSON")
     parser.add_argument("--max-gates", type=int, default=480, help="Maximum sampled gates in browser JSON")
     args = parser.parse_args(argv)
 
-    preview = build_field_preview_from_cfradial(
-        Path(args.input).expanduser().resolve(),
-        field=args.field,
-        sweep=args.sweep,
-        sweep_index=args.sweep_index,
-        max_rays=args.max_rays,
-        max_gates=args.max_gates,
-    )
+    previews = [
+        build_field_preview_from_cfradial(
+            Path(input_path).expanduser().resolve(),
+            field=args.field,
+            sweep=args.sweep,
+            sweep_index=args.sweep_index,
+            max_rays=args.max_rays,
+            max_gates=args.max_gates,
+        )
+        for input_path in args.input
+    ]
+    if args.playlist or len(previews) > 1:
+        payload = build_field_preview_playlist(previews, case_id=args.case_id, field=args.field)
+        label = "field preview playlist"
+    else:
+        payload = previews[0]
+        label = "field preview"
     out = Path(args.out).expanduser().resolve()
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(json.dumps(preview, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    print(f"Wrote field preview: {out}")
+    out.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    print(f"Wrote {label}: {out}")
     return 0
 
 

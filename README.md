@@ -103,7 +103,23 @@ Then open:
 http://localhost:8765/viewer/index.html
 ```
 
-Load `case_timeline.json`, `temporal_tracks.json`, and `change_summary.json` with the file pickers. Optionally load `field_preview.json` to draw a sampled native polar sweep of observed gates. The field panel now has a larger cockpit-style graphics batch: **Native polar** and **2.5D slab** render modes, a scan-sweep animation cue, tilt control, and visual exaggeration control. The 2.5D slab extrudes observed gate values for visual emphasis only; it is not a vertical retrieval, not a gridded volume, and not a field-value delta. When the CfRadial file includes radar site latitude and longitude, the viewer also draws a radar site marker and sector outline for geographic context. Optionally load `map_overlays.json` (`stormdeck.map_overlays.v0`) to add towns, state/county boundary linework, and warning corridor polygons as context overlays on the orientation sketch only. The map-context sidebar reports stacked overlay counts for towns, warning corridors, county boundaries, and state boundaries, plus a small legend showing their symbol colors. The faint sketch grid is only a visual guide; radar gates are deliberately not gridded or map-projected. The viewer intentionally displays observed metadata, pairing rules, scan age, provenance, confidence, uncertainty, warnings, temporal tracks, and the quarantine/debug lane.
+Load `case_timeline.json`, `temporal_tracks.json`, and `change_summary.json` with the file pickers. Optionally load `field_preview.json` for one sampled native polar sweep, or load `field_preview_playlist.json` (`stormdeck.field_preview_playlist.v0`) for frame scrub/playback. The field panel now has a larger cockpit-style graphics batch: **Native polar** and **2.5D slab** render modes, a scan-sweep animation cue, timeline frame playback, a frame scrubber, previous-frame change ghosting, tilt control, and visual exaggeration control. The 2.5D slab extrudes observed gate values for visual emphasis only; it is not a vertical retrieval, not a gridded volume, and not a field-value delta. Playlist playback steps through exported observed frames; it is not motion interpolation. When the CfRadial file includes radar site latitude and longitude, the viewer also draws a radar site marker and sector outline for geographic context. Optionally load `map_overlays.json` (`stormdeck.map_overlays.v0`) to add towns, state/county boundary linework, and warning corridor polygons as context overlays on the orientation sketch only. The map-context sidebar reports stacked overlay counts for towns, warning corridors, county boundaries, and state boundaries, plus a small legend showing their symbol colors. The faint sketch grid is only a visual guide; radar gates are deliberately not gridded or map-projected. The viewer intentionally displays observed metadata, pairing rules, scan age, provenance, confidence, uncertainty, warnings, temporal tracks, and the quarantine/debug lane.
+
+Export a multi-frame preview playlist in one command instead of regenerating/loading individual frame previews:
+
+```bash
+python3 scripts/stormdeck_field_preview.py \
+  /home/atd_test/storm-deck-data/20260402_031550/CFILE/cfradial/*.nc \
+  --playlist \
+  --case-id 20260402_031550_supercell \
+  --field REF \
+  --sweep-index 0 \
+  --max-rays 220 \
+  --max-gates 420 \
+  --out /data/stormdeck/exports/20260402_031550/field_preview_playlist.json
+```
+
+Load that single `field_preview_playlist.json` once, then use **Play frames** or the frame scrubber without rearming the cockpit for every frame.
 
 `map_overlays.json` is optional context data; the radar exporter does not create it directly. To test the layer immediately, load the committed sample file:
 

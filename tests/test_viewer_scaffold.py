@@ -204,6 +204,22 @@ def test_viewer_uses_stacked_overlay_counts_and_clarifies_not_gridded():
     assert "visual guide grid only" in html
 
 
+def test_viewer_supports_field_preview_playlist_scrubber_and_change_ghosts():
+    html = VIEWER.read_text(encoding="utf-8")
+
+    assert "field_preview_playlist" in html
+    assert "stormdeck.field_preview_playlist.v0" in html
+    assert "field-preview-playlist" in html
+    assert "frame-scrubber" in html
+    assert "setFrameIndex" in html
+    assert "toggleFramePlayback" in html
+    assert "drawPreviousFrameGhost" in html
+    assert "computeFrameDeltaStats" in html
+    assert "change ghost" in html
+    assert "not motion interpolation" in html
+    assert "frame playlist" in html
+
+
 def test_viewer_batches_animation_and_2_5d_controls_with_honesty_language():
     html = VIEWER.read_text(encoding="utf-8")
 

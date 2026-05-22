@@ -241,6 +241,7 @@
           <label class="file-card"><span>temporal_tracks.json</span><input type="file" accept="application/json,.json" data-json-role="temporal_tracks"></label>
           <label class="file-card"><span>change_summary.json</span><input type="file" accept="application/json,.json" data-json-role="change_summary"></label>
           <label class="file-card"><span>field_preview.json</span><input type="file" accept="application/json,.json" data-json-role="field_preview"></label>
+          <label class="file-card"><span>field_preview_playlist.json</span><input id="field-preview-playlist" type="file" accept="application/json,.json" data-json-role="field_preview_playlist"><small>stormdeck.field_preview_playlist.v0</small></label>
           <label class="file-card"><span>map_overlays.json</span><input type="file" accept="application/json,.json" data-json-role="map_overlays"></label>
         </div>
         <p class="muted">Expected path shape: <span class="mono">/data/stormdeck/exports/20260402_031550/*.json</span>. Browser security requires selecting local files or serving this viewer from the export directory.</p>
@@ -293,6 +294,8 @@
         </div>
         <div class="scene-playback">
           <button type="button" id="animation-toggle" onclick="toggleAnimation()">Play sweep</button>
+          <button type="button" id="frame-playback-toggle" onclick="toggleFramePlayback()">Play frames</button>
+          <label class="scene-slider" for="frame-scrubber">frame <input id="frame-scrubber" type="range" min="0" max="0" value="0" oninput="setFrameIndex(this.value)"></label>
           <label class="scene-slider" for="scene-tilt-slider">tilt <input id="scene-tilt-slider" type="range" min="0" max="65" value="42" oninput="setSceneTilt(this.value)"></label>
           <label class="scene-slider" for="vertical-exaggeration-slider">exag <input id="vertical-exaggeration-slider" type="range" min="0" max="70" value="30" oninput="setSceneExaggeration(this.value)"></label>
         </div>
@@ -342,6 +345,10 @@
       temporal_tracks: null,
       change_summary: null,
       field_preview: null,
+      field_preview_playlist: null,
+      currentFrameIndex: 0,
+      framePlaybackPlaying: false,
+      framePlaybackTimerId: null,
       map_overlays: null,
       selectedTrackId: null,
       mapFocusMode: 'local-impact',
@@ -367,6 +374,51 @@
       { value: -20, color: '#7c3aed' },
       { value: -30, color: '#1f102f' },
     ];
+
+    function currentFrameRecord() {
+      const frames = state.field_preview_playlist?.frames ?? [];
+      if (!frames.length) return null;
+      const index = Math.max(0, Math.min(frames.length - 1, Number(state.currentFrameIndex) || 0));
+      return frames[index];
+    }
+
+    function currentFieldPreview() {
+      return currentFrameRecord()?.preview ?? state.field_preview;
+    }
+
+    function previousFieldPreview() {
+      const frames = state.field_preview_playlist?.frames ?? [];
+      const index = Math.max(0, Math.min(frames.length - 1, Number(state.currentFrameIndex) || 0));
+      if (!frames.length || index <= 0) return null;
+      return frames[index - 1]?.preview ?? null;
+    }
+
+    function setFrameIndex(value) {
+      const frames = state.field_preview_playlist?.frames ?? [];
+      state.currentFrameIndex = Math.max(0, Math.min(Math.max(0, frames.length - 1), Number(value) || 0));
+      renderFieldPreview();
+    }
+
+    function toggleFramePlayback() {
+      state.framePlaybackPlaying = !state.framePlaybackPlaying;
+      if (state.framePlaybackPlaying) startFramePlayback(); else stopFramePlayback();
+      renderFieldPreview();
+    }
+
+    function startFramePlayback() {
+      stopFramePlayback();
+      state.framePlaybackTimerId = setInterval(() => {
+        const frames = state.field_preview_playlist?.frames ?? [];
+        if (!frames.length) return;
+        state.currentFrameIndex = (state.currentFrameIndex + 1) % frames.length;
+        renderFieldPreview();
+      }, 650);
+    }
+
+    function stopFramePlayback() {
+      if (state.framePlaybackTimerId) clearInterval(state.framePlaybackTimerId);
+      state.framePlaybackTimerId = null;
+    }
 
     function setMapFocusMode(mode) {
       state.mapFocusMode = mode === 'full-sector' ? 'full-sector' : 'local-impact';
@@ -426,6 +478,14 @@
         reader.onload = () => {
           try {
             state[role] = JSON.parse(reader.result);
+            if (role === 'field_preview_playlist') {
+              state.currentFrameIndex = 0;
+              state.field_preview = null;
+            }
+            if (role === 'field_preview') {
+              state.field_preview_playlist = null;
+              state.currentFrameIndex = 0;
+            }
             renderAll();
           } catch (error) {
             alert(`Could not parse ${file.name}: ${error.message}`);
@@ -461,13 +521,13 @@
     }
 
     function renderSourceStatus() {
-      const loaded = ['case_timeline', 'temporal_tracks', 'change_summary', 'field_preview', 'map_overlays'].filter(key => state[key]);
+      const loaded = ['case_timeline', 'temporal_tracks', 'change_summary', 'field_preview', 'field_preview_playlist', 'map_overlays'].filter(key => state[key]);
       const status = document.getElementById('source-status');
       status.innerHTML = `
-        <span class="pill ${loaded.length >= 3 ? 'good' : 'warn'}">${loaded.length}/5 exports loaded</span>
+        <span class="pill ${loaded.length >= 3 ? 'good' : 'warn'}">${loaded.length}/6 exports loaded</span>
         <span class="pill">data source: local JSON</span>
-        <span class="pill">confidence: ${state.field_preview ? 'observed field sample' : 'metadata-safe'}</span>
-        <span class="pill">uncertainty: ${state.field_preview ? 'sampled radar arrays; no interpolation' : 'radar arrays not read'}</span>
+        <span class="pill">confidence: ${currentFieldPreview() ? 'observed field sample' : 'metadata-safe'}</span>
+        <span class="pill">uncertainty: ${currentFieldPreview() ? 'sampled radar arrays; no interpolation' : 'radar arrays not read'}</span>
       `;
     }
 
@@ -568,7 +628,7 @@
     }
 
     function renderFieldPreview() {
-      const preview = state.field_preview;
+      const preview = currentFieldPreview();
       const summary = document.getElementById('field-preview-summary');
       const legend = document.getElementById('field-preview-legend');
       const canvas = document.getElementById('field-preview-canvas');
@@ -592,6 +652,7 @@
       }
       renderSceneControls();
       if (state.sceneMode === 'native-polar') drawNativePolarPreview(canvas, preview); else drawTwoPointFiveDSlabPreview(canvas, preview);
+      drawPreviousFrameGhost(canvas, preview, previousFieldPreview());
       drawScanSweepOverlay(canvas, preview);
       renderSceneStatus(preview);
       drawMapContext(document.getElementById('map-context-canvas'), preview);
@@ -603,7 +664,7 @@
         <ul class="clean">
           <li>Field: <span class="accent">${escapeHtml(preview.field?.name)}</span> ${escapeHtml(preview.field?.units || '')}</li>
           <li>Scan: <span class="mono">${escapeHtml(display.scan_name ?? preview.source?.scan_name ?? 'unknown')}</span></li>
-          <li>Time: <span class="mono">${escapeHtml(shortTime(display.time_coverage_start ?? preview.source?.time_coverage_start))}</span></li>
+          <li>Frame: <span class="mono">${state.field_preview_playlist ? `${state.currentFrameIndex + 1}/${state.field_preview_playlist.frames?.length ?? 0}` : 'single preview'}</span> • Time: <span class="mono">${escapeHtml(shortTime(display.time_coverage_start ?? preview.source?.time_coverage_start))}</span></li>
           <li>Elevation: <span class="mono">${escapeHtml(display.fixed_angle_label ?? 'unknown')}</span> • Sweep: <span class="mono">${escapeHtml(preview.sweep?.name)}</span></li>
           <li>Elevation span: <span class="mono">${fmtNumber(display.elevation_min_deg, 1, '°')}–${fmtNumber(display.elevation_max_deg, 1, '°')}</span> • median <span class="mono">${fmtNumber(display.elevation_median_deg, 1, '°')}</span> • strategy precision 0.1° • ~ means rounded/jittered</li>
           <li>Radials: ${fmt(display.radial_count ?? preview.sweep?.ray_count)} • Samples: ${fmt(sampling.sampled_ray_count)} rays × ${fmt(sampling.sampled_gate_count)} gates from ${fmt(preview.sweep?.ray_count)} × ${fmt(preview.sweep?.gate_count)}</li>
@@ -982,6 +1043,18 @@
         toggle.textContent = state.animationPlaying ? 'Pause sweep' : 'Play sweep';
         toggle.classList.toggle('active', state.animationPlaying);
       }
+      const playback = document.getElementById('frame-playback-toggle');
+      if (playback) {
+        playback.textContent = state.framePlaybackPlaying ? 'Pause frames' : 'Play frames';
+        playback.classList.toggle('active', state.framePlaybackPlaying);
+      }
+      const scrubber = document.getElementById('frame-scrubber');
+      if (scrubber) {
+        const frameMax = Math.max(0, (state.field_preview_playlist?.frames?.length ?? 1) - 1);
+        scrubber.max = String(frameMax);
+        scrubber.value = String(Math.max(0, Math.min(frameMax, Number(state.currentFrameIndex) || 0)));
+        scrubber.disabled = frameMax === 0;
+      }
       const tilt = document.getElementById('scene-tilt-slider');
       if (tilt && Number(tilt.value) !== state.sceneTiltDeg) tilt.value = state.sceneTiltDeg;
       const exaggeration = document.getElementById('vertical-exaggeration-slider');
@@ -992,12 +1065,71 @@
       const status = document.getElementById('scene-status');
       const stats = preview.field?.stats ?? {};
       const modeLabel = state.sceneMode === 'native-polar' ? 'Native polar' : '2.5D slab';
+      const frames = state.field_preview_playlist?.frames ?? [];
+      const delta = computeFrameDeltaStats(previousFieldPreview(), preview);
       status.innerHTML = `
         <ul class="clean">
           <li>${modeLabel}: observed gates only; no invented interpolation, no volumetric reconstruction.</li>
+          <li>Frame playlist: ${frames.length ? `${state.currentFrameIndex + 1}/${frames.length}` : 'single frame'}; ${state.framePlaybackPlaying ? 'playing frames' : 'paused frames'}; not motion interpolation.</li>
+          <li>Change ghost: ${delta ? `${fmt(delta.changedGateCount)} sampled gates changed; mean Δ ${fmtNumber(delta.meanAbsDelta, 1)}` : 'load a frame playlist and advance past frame 1 to compare previous sampled gates'}.</li>
           <li>Animation: ${state.animationPlaying ? 'playing scan sweep overlay' : 'paused scan sweep overlay'} at <span class="mono">${fmtNumber(state.animationPhase, 0, '°')}</span>. Sweep overlay is a temporal/orientation cue, not a new frame.</li>
           <li>2.5D slab: observed gates extruded for visual emphasis from ${fmtNumber(stats.min, 1)} to ${fmtNumber(stats.max, 1)}; not a vertical retrieval.</li>
         </ul>`;
+    }
+
+    function computeFrameDeltaStats(previous, current) {
+      if (!previous || !current) return null;
+      const prior = previous.values ?? [];
+      const now = current.values ?? [];
+      let changedGateCount = 0;
+      let absDeltaSum = 0;
+      for (let ri = 0; ri < Math.min(prior.length, now.length); ri++) {
+        for (let gi = 0; gi < Math.min(prior[ri]?.length ?? 0, now[ri]?.length ?? 0); gi++) {
+          const a = Number(prior[ri][gi]);
+          const b = Number(now[ri][gi]);
+          if (!Number.isFinite(a) || !Number.isFinite(b)) continue;
+          const delta = Math.abs(b - a);
+          if (delta > 0.001) {
+            changedGateCount += 1;
+            absDeltaSum += delta;
+          }
+        }
+      }
+      return { changedGateCount, meanAbsDelta: changedGateCount ? absDeltaSum / changedGateCount : 0 };
+    }
+
+    function drawPreviousFrameGhost(canvas, current, previous) {
+      if (!previous || !current) return;
+      const ctx = canvas.getContext('2d');
+      const size = canvas.width;
+      const centerX = size / 2;
+      const centerY = state.sceneMode === 'native-polar' ? size / 2 : size * 0.57;
+      const yScale = state.sceneMode === 'native-polar' ? 1 : Math.cos((90 - state.sceneTiltDeg) * Math.PI / 180);
+      const ranges = previous.coordinates?.range_m ?? [];
+      const azimuths = previous.coordinates?.azimuth_deg ?? [];
+      const values = previous.values ?? [];
+      const maxRange = Math.max(1, ...ranges.filter(v => Number.isFinite(v)));
+      const scale = (state.sceneMode === 'native-polar' ? size * 0.43 : size * 0.39) / maxRange;
+      ctx.save();
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.18)';
+      for (let ri = 0; ri < values.length; ri++) {
+        const az = (Number(azimuths[ri]) || 0) * Math.PI / 180;
+        const sin = Math.sin(az);
+        const cos = Math.cos(az);
+        for (let gi = 0; gi < (values[ri] ?? []).length; gi++) {
+          const value = Number(values[ri][gi]);
+          if (!Number.isFinite(value)) continue;
+          const range = Number(ranges[gi]);
+          if (!Number.isFinite(range)) continue;
+          const x = centerX + range * scale * sin;
+          const y = centerY - range * scale * cos * yScale;
+          ctx.fillRect(x - 0.75, y - 0.75, 1.5, 1.5);
+        }
+      }
+      ctx.fillStyle = 'rgba(248, 250, 252, 0.62)';
+      ctx.font = '10px JetBrains Mono, monospace';
+      ctx.fillText('previous-frame change ghost • sampled gates only', 18, size - 34);
+      ctx.restore();
     }
 
     function valueHeightPx(value, vmin, vmax) {
