@@ -59,6 +59,17 @@ python3 scripts/stormdeck_case_timeline.py \
   --out /data/stormdeck/exports/20260402_031550/case_timeline.json
 ```
 
+Build comparable temporal tracks for replay and future “what changed” panels:
+
+```bash
+python3 scripts/stormdeck_temporal_tracks.py \
+  --inventory /path/to/217-volumes.txt \
+  --case-id 20260402_031550_supercell \
+  --out /data/stormdeck/exports/20260402_031550/temporal_tracks.json
+```
+
+The temporal-tracks exporter classifies complete scan products separately from transition fragments, quarantines tiny or partial products by default, and only groups comparable observations into the same track. For the validated KATD supercell inventory, the expected operational lanes are low-level sector scans, complete 20-sweep Supercell 3D volumes, complete 9-sweep native RHI volumes, and a quarantine/debug lane for fragments.
+
 Or scan a CfRadial directory directly on `wea-fs`:
 
 ```bash
