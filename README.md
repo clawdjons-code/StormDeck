@@ -50,6 +50,24 @@ Build the smaller engine-facing volume index from the generated probe manifest:
 python3 scripts/stormdeck_volume_index.py stormdeck_case_probe_export/<case-name>/manifest.json
 ```
 
+Build a case-level timeline from a metadata inventory JSON:
+
+```bash
+python3 scripts/stormdeck_case_timeline.py \
+  --inventory /path/to/mvol-su.txt \
+  --case-id 20260402_031550_supercell \
+  --out /data/stormdeck/exports/20260402_031550/case_timeline.json
+```
+
+Or scan a CfRadial directory directly on `wea-fs`:
+
+```bash
+python3 scripts/stormdeck_case_timeline.py \
+  --glob '/home/atd_test/storm-deck-data/20260402_031550/CFILE/cfradial/*.nc' \
+  --case-id 20260402_031550_supercell \
+  --out /data/stormdeck/exports/20260402_031550/case_timeline.json
+```
+
 Known `wea-fs` validation input:
 
 ```text
