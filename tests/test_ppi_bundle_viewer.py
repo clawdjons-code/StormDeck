@@ -8,7 +8,7 @@ VIEWER = ROOT / "viewer" / "ppi_bundle_viewer.html"
 def test_ppi_bundle_viewer_exists_and_targets_replay_index():
     html = VIEWER.read_text(encoding="utf-8")
 
-    assert "StormDeck PPI Replay Bundle Viewer" in html
+    assert "StormDeck PPI Sample Bundle Browser" in html
     assert "ppi_tprt_replay_index.json" in html
     assert "stormdeck.ppi_replay_index.v0" in html
     assert "volumes/<volume_id>/quicklooks/<sweep>_<field>.png" in html
@@ -30,7 +30,7 @@ def test_ppi_bundle_viewer_enforces_operational_caveats_and_no_delta_claims():
 
     required = [
         "sample/browse bundle",
-        "not temporal storm evidence",
+        "not a time-continuous storm sequence",
         "do not interpret frame changes as storm motion",
         "RHI scans are intentionally excluded",
         "not gridded 3D volume rendering",
@@ -52,3 +52,32 @@ def test_ppi_bundle_viewer_has_operator_controls_and_keyboard_navigation():
     assert "ArrowUp" in html
     assert "ArrowDown" in html
     assert "event.key === ' '" in html
+
+
+def test_ppi_bundle_viewer_adds_forecaster_readability_polish():
+    html = VIEWER.read_text(encoding="utf-8")
+
+    for helper in [
+        "formatAngleDeg",
+        "formatRangeKm",
+        "formatSweepPosition",
+        "renderFieldLegend",
+        "FIELD_LEGENDS",
+    ]:
+        assert helper in html
+    assert "0.5° elevation" in html
+    assert "441.1 km" in html
+    assert "Sweep 1 of 14" in html
+    assert "Reflectivity color guide" in html
+    assert "Velocity color guide" in html
+    assert "Spectrum width guide" in html
+
+
+def test_ppi_bundle_viewer_exposes_browse_vs_replay_and_path_copy_controls():
+    html = VIEWER.read_text(encoding="utf-8")
+
+    assert "PPI Sample Bundle Browser" in html
+    assert "copyQuicklookPath" in html
+    assert "copy quicklook path" in html
+    assert "title=\"Full volume identifier" in html
+    assert "Load ppi_tprt_replay_index.json" in html

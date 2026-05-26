@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>StormDeck PPI Replay Bundle Viewer</title>
+  <title>StormDeck PPI Sample Bundle Browser</title>
   <style>
     :root {
       color-scheme: dark;
@@ -124,6 +124,13 @@
     li { margin: 6px 0; }
     .status-line { color: var(--muted); font-size: 12px; }
     .error { color: var(--bad); }
+    .frame-toolbar { display: flex; gap: 8px; align-items: center; justify-content: space-between; margin-bottom: 10px; flex-wrap: wrap; }
+    .legend-panel { margin-top: 12px; border: 1px solid rgba(180, 200, 230, 0.10); border-radius: 12px; padding: 10px; background: rgba(255,255,255,0.022); }
+    .legend-title { color: var(--muted); font-size: 12px; margin-bottom: 8px; }
+    .legend-row { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 8px; align-items: center; margin: 6px 0; }
+    .legend-swatch { height: 10px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.18); background: var(--legend-color, #94a3b8); }
+    .legend-label { color: var(--muted); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11px; }
+    .quicklook-copy { max-width: 210px; min-height: 32px; padding: 6px 8px; font-size: 12px; }
     @media (max-width: 1180px) {
       main { grid-template-columns: 1fr; }
       header { grid-template-columns: 1fr; }
@@ -135,13 +142,13 @@
 <body>
   <header>
     <div>
-      <h1>StormDeck PPI Replay Bundle Viewer</h1>
+      <h1>StormDeck PPI Sample Bundle Browser</h1>
       <div class="subtitle">Consumes <span class="mono">ppi_tprt_replay_index.json</span>, per-volume manifests, and native quicklook PNGs. No NetCDF in browser.</div>
     </div>
     <div class="badge-row">
       <span class="badge good">observed quicklooks</span>
       <span class="badge warn">sample/browse bundle</span>
-      <span class="badge">not temporal storm evidence</span>
+      <span class="badge">not a time-continuous storm sequence</span>
     </div>
   </header>
 
@@ -182,8 +189,12 @@
         <div class="empty-state">Load the bundle to display <span class="mono">volumes/&lt;volume_id&gt;/quicklooks/&lt;sweep&gt;_&lt;field&gt;.png</span>.</div>
       </div>
       <div class="panel">
-        <h2>Current frame</h2>
+        <div class="frame-toolbar">
+          <h2 style="margin:0">Current frame</h2>
+          <button id="copyQuicklook" class="quicklook-copy" type="button">copy quicklook path</button>
+        </div>
         <div class="readout-grid" id="frameReadouts"></div>
+        <div id="fieldLegend" class="legend-panel" aria-live="polite"></div>
       </div>
     </section>
 
@@ -204,6 +215,26 @@
 
   <!-- Contract path: volumes/<volume_id>/quicklooks/<sweep>_<field>.png -->
   <script>
+    const FIELD_LEGENDS = {
+      REF: {
+        title: 'Reflectivity color guide',
+        units: 'dBZ',
+        rows: [
+          ['≥ 60', '#ffffff'], ['50', '#dc2626'], ['40', '#f97316'], ['30', '#fde047'], ['20', '#22c55e'], ['10', '#166534'], ['0', '#60a5fa'], ['< 0', '#64748b']
+        ],
+      },
+      VEL: {
+        title: 'Velocity color guide',
+        units: 'm/s radial',
+        rows: [['away +', '#ef4444'], ['near 0', '#e5e7eb'], ['toward −', '#3b82f6']],
+      },
+      SW: {
+        title: 'Spectrum width guide',
+        units: 'm/s',
+        rows: [['high', '#f97316'], ['moderate', '#fde047'], ['low', '#22c55e']],
+      },
+    };
+
     const bundleState = {
       root: '.',
       index: null,
@@ -227,6 +258,60 @@
 
     function volumeIdFromFile(filePath) {
       return String(filePath || '').split('/').pop().replace(/\.nc$/i, '');
+    }
+
+
+    function escapeHtml(value) {
+      return String(value ?? '—').replace(/[&<>"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[char]));
+    }
+
+    function formatAngleDeg(value, type = 'angle') {
+      const numeric = Number(value);
+      if (!Number.isFinite(numeric)) return '—';
+      return `${numeric.toFixed(1)}° ${type || 'angle'}`; // example: 0.5° elevation
+    }
+
+    function formatRangeKm(meters) {
+      const numeric = Number(meters);
+      if (!Number.isFinite(numeric)) return '—';
+      return `${(numeric / 1000).toFixed(1)} km`; // example: 441.1 km
+    }
+
+    function sweepIndexNumber(sweepName) {
+      return Number(String(sweepName || '').replace('sweep_', '')) || 0;
+    }
+
+    function sweepCount() {
+      const manifest = currentManifest();
+      const manifestCount = Array.isArray(manifest?.sweeps) ? manifest.sweeps.length : 0;
+      return manifestCount || currentVolume()?.sweep_count || 14;
+    }
+
+    function formatSweepPosition(sweepName) {
+      return `Sweep ${sweepIndexNumber(sweepName) + 1} of ${sweepCount()}`; // example: Sweep 1 of 14
+    }
+
+    function renderFieldLegend() {
+      const legend = FIELD_LEGENDS[bundleState.field] || FIELD_LEGENDS.REF;
+      $('fieldLegend').innerHTML = `
+        <div class="legend-title">${escapeHtml(legend.title)} <span class="mono">${escapeHtml(legend.units)}</span></div>
+        ${legend.rows.map(([label, color]) => `
+          <div class="legend-row">
+            <div class="legend-label">${escapeHtml(label)}</div>
+            <div class="legend-swatch" style="--legend-color:${escapeHtml(color)}"></div>
+          </div>`).join('')}
+      `;
+    }
+
+    async function copyQuicklookPath() {
+      const path = quicklookPath();
+      if (!path) return;
+      try {
+        await navigator.clipboard.writeText(path);
+        setStatus(`Copied quicklook path: ${path}`);
+      } catch (_) {
+        setStatus(`Quicklook path: ${path}`);
+      }
     }
 
     function setStatus(text, error = false) {
@@ -271,10 +356,11 @@
       const volumes = bundleState.index?.volumes || [];
       volumeSelect.innerHTML = volumes.map((volume) => {
         const id = volumeIdFromFile(volume.file);
-        return `<option value="${id}">${id}</option>`;
+        return `<option value="${id}" title="Full volume identifier: ${id}">${id}</option>`;
       }).join('');
       volumeSelect.value = bundleState.volumeId || '';
-      sweepSelect.innerHTML = Array.from({ length: 14 }, (_, i) => `<option value="sweep_${i}">sweep_${i}</option>`).join('');
+      const count = sweepCount();
+      sweepSelect.innerHTML = Array.from({ length: count }, (_, i) => `<option value="sweep_${i}">sweep_${i} · Sweep ${i + 1} of ${count}</option>`).join('');
       sweepSelect.value = bundleState.sweep;
       fieldSelect.value = bundleState.field;
     }
@@ -312,9 +398,10 @@
       $('frameReadouts').innerHTML = [
         ['Volume', bundleState.volumeId || '—'],
         ['Field', bundleState.field],
-        ['Sweep', bundleState.sweep],
+        ['Sweep', formatSweepPosition(bundleState.sweep)],
         ['Quicklook', path || '—'],
-      ].map(([label, value]) => `<div class="readout"><div class="value mono">${value}</div><div class="label">${label}</div></div>`).join('');
+      ].map(([label, value]) => `<div class="readout"><div class="value mono" title="${escapeHtml(value)}">${escapeHtml(value)}</div><div class="label">${label}</div></div>`).join('');
+      renderFieldLegend();
       $('metadataPanel').innerHTML = [
         ['Schema', bundleState.index?.schema || '—'],
         ['Case', bundleState.index?.case_id || '—'],
@@ -322,17 +409,17 @@
         ['Start', volume?.start_time || manifest?.start_time || '—'],
         ['End', volume?.end_time || manifest?.end_time || '—'],
         ['Volume type', manifest?.volume_type || volume?.scan_modes?.join(', ') || '—'],
-        ['Sweep fixed', sweep ? `${sweep.fixed_angle_type || 'angle'} ${sweep.fixed_angle_deg ?? '—'}°` : '—'],
+        ['Sweep fixed', sweep ? formatAngleDeg(sweep.fixed_angle_deg, sweep.fixed_angle_type) : '—'],
         ['Rays × gates', sweep ? `${sweep.ray_count ?? '—'} × ${sweep.gate_count ?? '—'}` : '—'],
-        ['Range last', sweep?.range?.last_gate_m ? `${Math.round(sweep.range.last_gate_m)} m` : '—'],
+        ['Range last', sweep?.range?.last_gate_m ? formatRangeKm(sweep.range.last_gate_m) : '—'],
         ['Nyquist', sweep?.nyquist_velocity?.median_mps ? `${Number(sweep.nyquist_velocity.median_mps).toFixed(2)} m/s` : '—'],
         ['Manifest', manifest?.error ? `ERROR: ${manifest.error}` : 'loaded'],
-      ].map(([term, value]) => `<dt>${term}</dt><dd class="mono">${value}</dd>`).join('');
+      ].map(([term, value]) => `<dt>${escapeHtml(term)}</dt><dd class="mono" title="${escapeHtml(value)}">${escapeHtml(value)}</dd>`).join('');
     }
 
     function stepSweep(delta) {
       const current = Number(String(bundleState.sweep).replace('sweep_', '')) || 0;
-      const next = Math.max(0, Math.min(13, current + delta));
+      const next = Math.max(0, Math.min(sweepCount() - 1, current + delta));
       bundleState.sweep = `sweep_${next}`;
       renderControls();
       renderFrame();
@@ -344,6 +431,7 @@
     sweepSelect.addEventListener('change', () => { bundleState.sweep = sweepSelect.value; renderFrame(); });
     $('prevSweep').addEventListener('click', () => stepSweep(-1));
     $('nextSweep').addEventListener('click', () => stepSweep(1));
+    $('copyQuicklook').addEventListener('click', copyQuicklookPath);
     document.addEventListener('keydown', (event) => {
       if (event.target.matches('input, select, button')) return;
       if (event.key === 'ArrowLeft') stepSweep(-1);
