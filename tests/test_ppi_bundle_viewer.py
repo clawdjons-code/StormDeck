@@ -81,3 +81,29 @@ def test_ppi_bundle_viewer_exposes_browse_vs_replay_and_path_copy_controls():
     assert "copy quicklook path" in html
     assert "title=\"Full volume identifier" in html
     assert "Load ppi_tprt_replay_index.json" in html
+
+
+def test_ppi_bundle_viewer_has_zoom_fit_overlay_and_validation_summary():
+    html = VIEWER.read_text(encoding="utf-8")
+
+    for element_id in [
+        "fitModeSelect",
+        "fullscreenImage",
+        "frameOverlay",
+        "validationSummary",
+        "validationStatusBadge",
+    ]:
+        assert f'id="{element_id}"' in html
+    for text in ["Fit", "Native", "2x", "Fullscreen", "bundle_validation.json"]:
+        assert text in html
+    for helper in [
+        "loadValidationReport",
+        "renderValidationSummary",
+        "setFitMode",
+        "renderFrameOverlay",
+    ]:
+        assert helper in html
+    assert "READY · 2 volumes · 84 quicklooks · 0 missing" in html
+    assert "Volume time" in html
+    assert "Fixed angle" in html
+    assert "Observed quicklook; not gridded" in html

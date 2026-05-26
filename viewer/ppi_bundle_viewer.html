@@ -92,11 +92,35 @@
     }
     .image-frame img {
       display: block;
-      max-width: 100%;
-      max-height: 78vh;
       object-fit: contain;
       image-rendering: auto;
     }
+    .image-frame.fit img { max-width: 100%; max-height: 78vh; }
+    .image-frame.native img { max-width: none; max-height: none; }
+    .image-frame.zoom2 img { width: 200%; max-width: none; max-height: none; }
+    .frame-overlay {
+      position: absolute;
+      left: 12px;
+      top: 12px;
+      max-width: min(560px, calc(100% - 24px));
+      padding: 10px 12px;
+      border: 1px solid rgba(180, 200, 230, 0.16);
+      border-radius: 12px;
+      background: rgba(2, 3, 3, 0.72);
+      color: var(--ink);
+      backdrop-filter: blur(6px);
+      pointer-events: none;
+    }
+    .overlay-title { font-weight: 700; margin-bottom: 3px; }
+    .overlay-subtitle { color: var(--muted); font-size: 12px; }
+    .viewer-toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
+    .viewer-toolbar select, .viewer-toolbar button { width: auto; min-height: 34px; }
+    .validation-box { margin-top: 12px; border: 1px solid rgba(156, 240, 188, 0.18); border-radius: 12px; padding: 10px; background: rgba(156, 240, 188, 0.045); }
+    .validation-box.warn { border-color: rgba(255, 209, 102, 0.30); background: rgba(255, 209, 102, 0.06); }
+    .validation-status { display: inline-flex; border-radius: 999px; padding: 3px 8px; border: 1px solid rgba(156, 240, 188, 0.28); color: var(--accent-2); font-size: 11px; margin-bottom: 6px; }
+    .validation-status.warn { border-color: rgba(255, 209, 102, 0.32); color: var(--warn); }
+    .legend-panel { margin-top: 12px; border: 1px solid rgba(180, 200, 230, 0.10); border-radius: 12px; padding: 10px; background: rgba(255,255,255,0.022); }
+    .legend-compact { display: grid; grid-template-columns: repeat(auto-fit, minmax(72px, 1fr)); gap: 6px; }
     .empty-state { color: var(--muted); padding: 24px; text-align: center; }
     .readout-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
     .readout {
@@ -162,6 +186,10 @@
       </div>
       <button id="loadBundle">Load ppi_tprt_replay_index.json</button>
       <p id="loadStatus" class="status-line">Serve this file from the bundle directory, or set the bundle root to the export directory URL.</p>
+      <div id="validationSummary" class="validation-box warn">
+        <div id="validationStatusBadge" class="validation-status warn">validation not loaded</div>
+        <div class="mono">Looks for <span class="mono">bundle_validation.json</span> after loading the index.</div>
+      </div>
       <div class="control">
         <label for="volumeSelect">Volume</label>
         <select id="volumeSelect"></select>
@@ -185,8 +213,18 @@
     </aside>
 
     <section class="viewer-shell">
-      <div class="image-frame" id="imageFrame">
+      <div class="panel viewer-toolbar">
+        <div class="status-line">Image scale</div>
+        <select id="fitModeSelect" aria-label="Image fit mode">
+          <option value="fit">Fit</option>
+          <option value="native">Native</option>
+          <option value="zoom2">2x</option>
+        </select>
+        <button id="fullscreenImage" type="button">Fullscreen</button>
+      </div>
+      <div class="image-frame fit" id="imageFrame">
         <div class="empty-state">Load the bundle to display <span class="mono">volumes/&lt;volume_id&gt;/quicklooks/&lt;sweep&gt;_&lt;field&gt;.png</span>.</div>
+        <div id="frameOverlay" class="frame-overlay" hidden></div>
       </div>
       <div class="panel">
         <div class="frame-toolbar">
@@ -214,6 +252,7 @@
   </main>
 
   <!-- Contract path: volumes/<volume_id>/quicklooks/<sweep>_<field>.png -->
+  <!-- Expected ready summary example: READY · 2 volumes · 84 quicklooks · 0 missing -->
   <script>
     const FIELD_LEGENDS = {
       REF: {
@@ -242,6 +281,8 @@
       volumeId: null,
       field: 'REF',
       sweep: 'sweep_0',
+      validation: null,
+      fitMode: 'fit',
     };
 
     const $ = (id) => document.getElementById(id);
@@ -295,12 +336,12 @@
       const legend = FIELD_LEGENDS[bundleState.field] || FIELD_LEGENDS.REF;
       $('fieldLegend').innerHTML = `
         <div class="legend-title">${escapeHtml(legend.title)} <span class="mono">${escapeHtml(legend.units)}</span></div>
-        ${legend.rows.map(([label, color]) => `
+        <div class="legend-compact">${legend.rows.map(([label, color]) => `
           <div class="legend-row">
             <div class="legend-label">${escapeHtml(label)}</div>
             <div class="legend-swatch" style="--legend-color:${escapeHtml(color)}"></div>
           </div>`).join('')}
-      `;
+      ` + '</div>';
     }
 
     async function copyQuicklookPath() {
@@ -325,6 +366,51 @@
       return response.json();
     }
 
+
+    async function loadValidationReport() {
+      const validationPath = joinPath(bundleState.root, 'bundle_validation.json');
+      try {
+        bundleState.validation = await fetchJson(validationPath);
+      } catch (error) {
+        bundleState.validation = { status: 'not_loaded', error: error.message };
+      }
+      renderValidationSummary();
+    }
+
+    function renderValidationSummary() {
+      const report = bundleState.validation || { status: 'not_loaded' };
+      const ready = report.status === 'ready';
+      const text = ready
+        ? `READY · ${report.volume_count} volumes · ${report.quicklook_count} quicklooks · ${report.missing_quicklook_count} missing`
+        : `${String(report.status || 'not_loaded').toUpperCase()} · ${report.error || 'bundle_validation.json unavailable'}`;
+      $('validationStatusBadge').textContent = text;
+      $('validationStatusBadge').className = ready ? 'validation-status' : 'validation-status warn';
+      $('validationSummary').className = ready ? 'validation-box' : 'validation-box warn';
+    }
+
+    function setFitMode(mode) {
+      bundleState.fitMode = mode || 'fit';
+      const frame = $('imageFrame');
+      frame.classList.remove('fit', 'native', 'zoom2');
+      frame.classList.add(bundleState.fitMode);
+    }
+
+    function renderFrameOverlay(volume, sweep) {
+      const overlay = $('frameOverlay');
+      if (!volume || !sweep) {
+        overlay.hidden = true;
+        overlay.innerHTML = '';
+        return;
+      }
+      overlay.hidden = false;
+      overlay.innerHTML = `
+        <div class="overlay-title">${escapeHtml(bundleState.field)} · ${escapeHtml(volume.scan_name || 'scan')} · ${escapeHtml(formatSweepPosition(bundleState.sweep))}</div>
+        <div class="overlay-subtitle">Volume time: ${escapeHtml(volume.start_time || '—')} → ${escapeHtml(volume.end_time || '—')}</div>
+        <div class="overlay-subtitle">Fixed angle: ${escapeHtml(formatAngleDeg(sweep.fixed_angle_deg, sweep.fixed_angle_type))} · ${escapeHtml(sweep.ray_count ?? '—')} × ${escapeHtml(sweep.gate_count ?? '—')} gates</div>
+        <div class="overlay-subtitle">Observed quicklook; not gridded 3D rendering or time-continuous storm motion.</div>
+      `;
+    }
+
     async function loadBundle() {
       bundleState.root = $('bundleRoot').value || '.';
       setStatus('Loading replay index…');
@@ -347,6 +433,7 @@
       }
       bundleState.volumeId = volumeIdFromFile(index.volumes?.[0]?.file);
       bundleState.sweep = 'sweep_0';
+      await loadValidationReport();
       renderControls();
       renderFrame();
       setStatus(`Loaded ${index.volume_count ?? index.volumes?.length ?? 0} PPI volumes from ${indexPath}`);
@@ -391,10 +478,12 @@
       const manifest = currentManifest();
       const frame = $('imageFrame');
       if (!path) {
-        frame.innerHTML = '<div class="empty-state">No quicklook selected.</div>';
+        frame.innerHTML = '<div class="empty-state">No quicklook selected.</div><div id="frameOverlay" class="frame-overlay" hidden></div>';
       } else {
-        frame.innerHTML = `<img src="${path}" alt="${bundleState.volumeId} ${bundleState.sweep} ${bundleState.field} observed PPI quicklook" onerror="this.replaceWith(Object.assign(document.createElement('div'), {className:'empty-state error', textContent:'Missing quicklook: ${path}'}))">`;
+        frame.innerHTML = `<img src="${path}" alt="${bundleState.volumeId} ${bundleState.sweep} ${bundleState.field} observed PPI quicklook" onerror="this.replaceWith(Object.assign(document.createElement('div'), {className:'empty-state error', textContent:'Missing quicklook: ${path}'}))"><div id="frameOverlay" class="frame-overlay" hidden></div>`;
       }
+      setFitMode(bundleState.fitMode);
+      renderFrameOverlay(volume, sweep);
       $('frameReadouts').innerHTML = [
         ['Volume', bundleState.volumeId || '—'],
         ['Field', bundleState.field],
@@ -432,6 +521,8 @@
     $('prevSweep').addEventListener('click', () => stepSweep(-1));
     $('nextSweep').addEventListener('click', () => stepSweep(1));
     $('copyQuicklook').addEventListener('click', copyQuicklookPath);
+    $('fitModeSelect').addEventListener('change', () => setFitMode($('fitModeSelect').value));
+    $('fullscreenImage').addEventListener('click', () => $('imageFrame').requestFullscreen?.());
     document.addEventListener('keydown', (event) => {
       if (event.target.matches('input, select, button')) return;
       if (event.key === 'ArrowLeft') stepSweep(-1);
