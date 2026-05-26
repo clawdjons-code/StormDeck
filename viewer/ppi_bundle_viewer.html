@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>StormDeck PPI Replay Bundle Viewer</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #07090b;
+      --panel: #101317;
+      --panel-2: #151a20;
+      --ink: #f3f7fb;
+      --muted: #97a3b4;
+      --dim: #667386;
+      --border: rgba(180, 200, 230, 0.16);
+      --accent: #79d2ff;
+      --accent-2: #9cf0bc;
+      --warn: #ffd166;
+      --bad: #ff7b7b;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: radial-gradient(circle at 18% 0%, rgba(121, 210, 255, 0.12), transparent 30rem), var(--bg);
+      color: var(--ink);
+      font: 14px/1.45 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    header {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 18px;
+      align-items: center;
+      padding: 18px 22px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(7, 9, 11, 0.88);
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      backdrop-filter: blur(14px);
+    }
+    h1 { margin: 0; font-size: 18px; font-weight: 650; letter-spacing: -0.02em; }
+    .subtitle { margin-top: 3px; color: var(--muted); font-size: 12px; }
+    .badge-row { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 6px 9px;
+      color: var(--muted);
+      background: rgba(255,255,255,0.03);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+    .badge.good { color: var(--accent-2); border-color: rgba(156, 240, 188, 0.32); }
+    .badge.warn { color: var(--warn); border-color: rgba(255, 209, 102, 0.32); }
+    main { display: grid; grid-template-columns: 340px minmax(0, 1fr) 360px; gap: 14px; padding: 14px; }
+    .panel {
+      background: linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.025));
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 14px;
+      min-width: 0;
+    }
+    .panel h2 { margin: 0 0 10px; font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.09em; }
+    .control { display: grid; gap: 6px; margin-bottom: 12px; }
+    label { color: var(--muted); font-size: 12px; }
+    select, button, input[type="text"] {
+      width: 100%;
+      min-height: 38px;
+      border: 1px solid var(--border);
+      background: #0b0f13;
+      color: var(--ink);
+      border-radius: 10px;
+      padding: 8px 10px;
+      font: inherit;
+    }
+    button { cursor: pointer; background: #13202a; }
+    button:hover { border-color: rgba(121, 210, 255, 0.42); }
+    .viewer-shell { display: grid; gap: 12px; }
+    .image-frame {
+      min-height: 68vh;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      background: #020303;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      position: relative;
+    }
+    .image-frame img {
+      display: block;
+      max-width: 100%;
+      max-height: 78vh;
+      object-fit: contain;
+      image-rendering: auto;
+    }
+    .empty-state { color: var(--muted); padding: 24px; text-align: center; }
+    .readout-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+    .readout {
+      border: 1px solid rgba(180, 200, 230, 0.10);
+      border-radius: 12px;
+      padding: 10px;
+      background: rgba(255,255,255,0.025);
+      overflow-wrap: anywhere;
+    }
+    .readout .value { font-size: 15px; font-weight: 650; }
+    .readout .label { margin-top: 3px; color: var(--dim); font-size: 11px; }
+    .warning {
+      border: 1px solid rgba(255, 209, 102, 0.30);
+      color: #ffe3a2;
+      background: rgba(255, 209, 102, 0.08);
+      border-radius: 12px;
+      padding: 10px;
+      margin-bottom: 12px;
+    }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+    dl { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 7px 10px; margin: 0; }
+    dt { color: var(--dim); }
+    dd { margin: 0; color: var(--ink); overflow-wrap: anywhere; }
+    ul { margin: 0; padding-left: 18px; color: var(--muted); }
+    li { margin: 6px 0; }
+    .status-line { color: var(--muted); font-size: 12px; }
+    .error { color: var(--bad); }
+    @media (max-width: 1180px) {
+      main { grid-template-columns: 1fr; }
+      header { grid-template-columns: 1fr; }
+      .badge-row { justify-content: flex-start; }
+      .readout-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>StormDeck PPI Replay Bundle Viewer</h1>
+      <div class="subtitle">Consumes <span class="mono">ppi_tprt_replay_index.json</span>, per-volume manifests, and native quicklook PNGs. No NetCDF in browser.</div>
+    </div>
+    <div class="badge-row">
+      <span class="badge good">observed quicklooks</span>
+      <span class="badge warn">sample/browse bundle</span>
+      <span class="badge">not temporal storm evidence</span>
+    </div>
+  </header>
+
+  <main>
+    <aside class="panel">
+      <h2>Bundle controls</h2>
+      <div class="warning">This viewer is for the KATD sample PPI bundle. The bundled PPI volumes are separated by months; do not interpret frame changes as storm motion or 60-second evolution.</div>
+      <div class="control">
+        <label for="bundleRoot">Bundle root URL/path</label>
+        <input id="bundleRoot" type="text" value="." aria-label="Bundle root URL/path" />
+      </div>
+      <button id="loadBundle">Load ppi_tprt_replay_index.json</button>
+      <p id="loadStatus" class="status-line">Serve this file from the bundle directory, or set the bundle root to the export directory URL.</p>
+      <div class="control">
+        <label for="volumeSelect">Volume</label>
+        <select id="volumeSelect"></select>
+      </div>
+      <div class="control">
+        <label for="fieldSelect">Field</label>
+        <select id="fieldSelect">
+          <option>REF</option>
+          <option>VEL</option>
+          <option>SW</option>
+        </select>
+      </div>
+      <div class="control">
+        <label for="sweepSelect">Sweep</label>
+        <select id="sweepSelect"></select>
+      </div>
+      <div class="badge-row" style="justify-content:flex-start;margin-top:12px">
+        <button id="prevSweep" type="button">← Sweep</button>
+        <button id="nextSweep" type="button">Sweep →</button>
+      </div>
+    </aside>
+
+    <section class="viewer-shell">
+      <div class="image-frame" id="imageFrame">
+        <div class="empty-state">Load the bundle to display <span class="mono">volumes/&lt;volume_id&gt;/quicklooks/&lt;sweep&gt;_&lt;field&gt;.png</span>.</div>
+      </div>
+      <div class="panel">
+        <h2>Current frame</h2>
+        <div class="readout-grid" id="frameReadouts"></div>
+      </div>
+    </section>
+
+    <aside class="panel">
+      <h2>Metadata</h2>
+      <dl id="metadataPanel">
+        <dt>Status</dt><dd>Awaiting bundle load.</dd>
+      </dl>
+      <h2 style="margin-top:18px">Operational caveats</h2>
+      <ul>
+        <li>Observed PPI quicklook PNGs only; not gridded 3D volume rendering.</li>
+        <li>RHI scans are intentionally excluded from this PPI replay index.</li>
+        <li>Per-sweep range, gates, and Nyquist must be read from manifests; do not assume global geometry.</li>
+        <li>Changes between these two sample volumes are not meteorological temporal deltas.</li>
+      </ul>
+    </aside>
+  </main>
+
+  <!-- Contract path: volumes/<volume_id>/quicklooks/<sweep>_<field>.png -->
+  <script>
+    const bundleState = {
+      root: '.',
+      index: null,
+      manifests: new Map(),
+      volumeId: null,
+      field: 'REF',
+      sweep: 'sweep_0',
+    };
+
+    const $ = (id) => document.getElementById(id);
+    const volumeSelect = $('volumeSelect');
+    const fieldSelect = $('fieldSelect');
+    const sweepSelect = $('sweepSelect');
+
+    function joinPath(...parts) {
+      return parts
+        .filter(Boolean)
+        .map((part, index) => String(part).replace(index === 0 ? /\/+$/g : /^\/+|\/+$/g, ''))
+        .join('/');
+    }
+
+    function volumeIdFromFile(filePath) {
+      return String(filePath || '').split('/').pop().replace(/\.nc$/i, '');
+    }
+
+    function setStatus(text, error = false) {
+      $('loadStatus').textContent = text;
+      $('loadStatus').className = error ? 'status-line error' : 'status-line';
+    }
+
+    async function fetchJson(path) {
+      const response = await fetch(path, { cache: 'no-store' });
+      if (!response.ok) throw new Error(`${response.status} ${response.statusText}: ${path}`);
+      return response.json();
+    }
+
+    async function loadBundle() {
+      bundleState.root = $('bundleRoot').value || '.';
+      setStatus('Loading replay index…');
+      const indexPath = joinPath(bundleState.root, 'ppi_tprt_replay_index.json');
+      const index = await fetchJson(indexPath);
+      if (index.schema !== 'stormdeck.ppi_replay_index.v0') {
+        throw new Error(`Unexpected schema: ${index.schema}`);
+      }
+      bundleState.index = index;
+      bundleState.manifests.clear();
+      for (const volume of index.volumes || []) {
+        const volumeId = volumeIdFromFile(volume.file);
+        const manifestPath = joinPath(bundleState.root, 'volumes', volumeId, 'manifest.json');
+        try {
+          const manifest = await fetchJson(manifestPath);
+          bundleState.manifests.set(volumeId, manifest);
+        } catch (error) {
+          bundleState.manifests.set(volumeId, { error: error.message });
+        }
+      }
+      bundleState.volumeId = volumeIdFromFile(index.volumes?.[0]?.file);
+      bundleState.sweep = 'sweep_0';
+      renderControls();
+      renderFrame();
+      setStatus(`Loaded ${index.volume_count ?? index.volumes?.length ?? 0} PPI volumes from ${indexPath}`);
+    }
+
+    function renderControls() {
+      const volumes = bundleState.index?.volumes || [];
+      volumeSelect.innerHTML = volumes.map((volume) => {
+        const id = volumeIdFromFile(volume.file);
+        return `<option value="${id}">${id}</option>`;
+      }).join('');
+      volumeSelect.value = bundleState.volumeId || '';
+      sweepSelect.innerHTML = Array.from({ length: 14 }, (_, i) => `<option value="sweep_${i}">sweep_${i}</option>`).join('');
+      sweepSelect.value = bundleState.sweep;
+      fieldSelect.value = bundleState.field;
+    }
+
+    function currentVolume() {
+      return (bundleState.index?.volumes || []).find((volume) => volumeIdFromFile(volume.file) === bundleState.volumeId) || null;
+    }
+
+    function currentManifest() {
+      return bundleState.manifests.get(bundleState.volumeId) || null;
+    }
+
+    function currentSweepManifest() {
+      const manifest = currentManifest();
+      if (!manifest || manifest.error) return null;
+      return (manifest.sweeps || []).find((sweep) => sweep.sweep_name === bundleState.sweep || sweep.name === bundleState.sweep) || null;
+    }
+
+    function quicklookPath() {
+      if (!bundleState.volumeId) return null;
+      return joinPath(bundleState.root, 'volumes', bundleState.volumeId, 'quicklooks', `${bundleState.sweep}_${bundleState.field}.png`);
+    }
+
+    function renderFrame() {
+      const path = quicklookPath();
+      const volume = currentVolume();
+      const sweep = currentSweepManifest();
+      const manifest = currentManifest();
+      const frame = $('imageFrame');
+      if (!path) {
+        frame.innerHTML = '<div class="empty-state">No quicklook selected.</div>';
+      } else {
+        frame.innerHTML = `<img src="${path}" alt="${bundleState.volumeId} ${bundleState.sweep} ${bundleState.field} observed PPI quicklook" onerror="this.replaceWith(Object.assign(document.createElement('div'), {className:'empty-state error', textContent:'Missing quicklook: ${path}'}))">`;
+      }
+      $('frameReadouts').innerHTML = [
+        ['Volume', bundleState.volumeId || '—'],
+        ['Field', bundleState.field],
+        ['Sweep', bundleState.sweep],
+        ['Quicklook', path || '—'],
+      ].map(([label, value]) => `<div class="readout"><div class="value mono">${value}</div><div class="label">${label}</div></div>`).join('');
+      $('metadataPanel').innerHTML = [
+        ['Schema', bundleState.index?.schema || '—'],
+        ['Case', bundleState.index?.case_id || '—'],
+        ['Scan', volume?.scan_name || manifest?.scan_name || '—'],
+        ['Start', volume?.start_time || manifest?.start_time || '—'],
+        ['End', volume?.end_time || manifest?.end_time || '—'],
+        ['Volume type', manifest?.volume_type || volume?.scan_modes?.join(', ') || '—'],
+        ['Sweep fixed', sweep ? `${sweep.fixed_angle_type || 'angle'} ${sweep.fixed_angle_deg ?? '—'}°` : '—'],
+        ['Rays × gates', sweep ? `${sweep.ray_count ?? '—'} × ${sweep.gate_count ?? '—'}` : '—'],
+        ['Range last', sweep?.range?.last_gate_m ? `${Math.round(sweep.range.last_gate_m)} m` : '—'],
+        ['Nyquist', sweep?.nyquist_velocity?.median_mps ? `${Number(sweep.nyquist_velocity.median_mps).toFixed(2)} m/s` : '—'],
+        ['Manifest', manifest?.error ? `ERROR: ${manifest.error}` : 'loaded'],
+      ].map(([term, value]) => `<dt>${term}</dt><dd class="mono">${value}</dd>`).join('');
+    }
+
+    function stepSweep(delta) {
+      const current = Number(String(bundleState.sweep).replace('sweep_', '')) || 0;
+      const next = Math.max(0, Math.min(13, current + delta));
+      bundleState.sweep = `sweep_${next}`;
+      renderControls();
+      renderFrame();
+    }
+
+    $('loadBundle').addEventListener('click', () => loadBundle().catch((error) => setStatus(error.message, true)));
+    volumeSelect.addEventListener('change', () => { bundleState.volumeId = volumeSelect.value; renderFrame(); });
+    fieldSelect.addEventListener('change', () => { bundleState.field = fieldSelect.value; renderFrame(); });
+    sweepSelect.addEventListener('change', () => { bundleState.sweep = sweepSelect.value; renderFrame(); });
+    $('prevSweep').addEventListener('click', () => stepSweep(-1));
+    $('nextSweep').addEventListener('click', () => stepSweep(1));
+    document.addEventListener('keydown', (event) => {
+      if (event.target.matches('input, select, button')) return;
+      if (event.key === 'ArrowLeft') stepSweep(-1);
+      if (event.key === 'ArrowRight') stepSweep(1);
+      if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+        const fields = ['REF', 'VEL', 'SW'];
+        const direction = event.key === 'ArrowUp' ? -1 : 1;
+        const next = (fields.indexOf(bundleState.field) + direction + fields.length) % fields.length;
+        bundleState.field = fields[next];
+        renderControls();
+        renderFrame();
+      }
+      if (event.key === ' ') {
+        event.preventDefault();
+        const volumes = bundleState.index?.volumes || [];
+        if (volumes.length < 2) return;
+        const ids = volumes.map((volume) => volumeIdFromFile(volume.file));
+        const next = (ids.indexOf(bundleState.volumeId) + 1) % ids.length;
+        bundleState.volumeId = ids[next];
+        renderControls();
+        renderFrame();
+      }
+    });
+  </script>
+</body>
+</html>
