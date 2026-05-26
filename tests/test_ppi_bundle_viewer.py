@@ -127,7 +127,7 @@ def test_ppi_bundle_viewer_loads_engine_manifest_and_inspects_playlist():
         "stormdeck.bundle_manifest.v0",
         "json_plus_relative_png_paths",
         "Frames: 84",
-        "StormDeck bundle browser v0.3",
+        "StormDeck bundle browser v0.4",
     ]:
         assert text in html
     for helper in [
@@ -135,5 +135,35 @@ def test_ppi_bundle_viewer_loads_engine_manifest_and_inspects_playlist():
         "renderEngineManifestSummary",
         "renderFrameInspector",
         "findEngineFrame",
+    ]:
+        assert helper in html
+
+
+def test_ppi_bundle_viewer_v04_has_frame_playlist_navigation_and_clear_sweep_indexing():
+    html = VIEWER.read_text(encoding="utf-8")
+
+    for element_id in [
+        "prevFrame",
+        "nextFrame",
+        "playlistPosition",
+        "playlistStrip",
+    ]:
+        assert f'id="{element_id}"' in html
+    for text in [
+        "StormDeck bundle browser v0.4",
+        "Frame 1 of 84",
+        "Index 0 · Sweep 1 of 14",
+        "3x",
+        "Frame ←",
+        "Frame →",
+        "Frame playlist navigation uses stormdeck_bundle_manifest.json order",
+    ]:
+        assert text in html
+    for helper in [
+        "currentEngineFrameIndex",
+        "selectEngineFrameByIndex",
+        "stepFrame",
+        "formatSweepIndexLabel",
+        "renderPlaylistStrip",
     ]:
         assert helper in html

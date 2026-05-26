@@ -98,6 +98,7 @@
     .image-frame.fit img { max-width: 100%; max-height: 78vh; }
     .image-frame.native img { max-width: none; max-height: none; }
     .image-frame.zoom2 img { width: 200%; max-width: none; max-height: none; }
+    .image-frame.zoom3 img { width: 300%; max-width: none; max-height: none; }
     .frame-overlay {
       position: absolute;
       left: 12px;
@@ -159,6 +160,12 @@
     .legend-swatch { height: 10px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.18); background: var(--legend-color, #94a3b8); }
     .legend-label { color: var(--muted); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11px; }
     .quicklook-copy { max-width: 210px; min-height: 32px; padding: 6px 8px; font-size: 12px; }
+    .playlist-controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
+    .playlist-controls button { width: auto; min-height: 32px; padding: 6px 10px; }
+    .playlist-position { color: var(--accent); font-weight: 700; }
+    .playlist-strip { margin-top: 8px; display: grid; gap: 5px; }
+    .playlist-frame { color: var(--muted); font-size: 12px; border: 1px solid rgba(180,200,230,0.08); border-radius: 8px; padding: 5px 7px; background: rgba(255,255,255,0.018); }
+    .playlist-frame.active { color: var(--ink); border-color: rgba(121,210,255,0.34); background: rgba(121,210,255,0.08); }
     @media (max-width: 1180px) {
       main { grid-template-columns: 1fr; }
       header { grid-template-columns: 1fr; }
@@ -177,7 +184,7 @@
       <span class="badge good">observed quicklooks</span>
       <span class="badge warn">sample/browse bundle</span>
       <span class="badge">not a time-continuous storm sequence</span>
-      <span id="appVersionBadge" class="badge">StormDeck bundle browser v0.3</span>
+      <span id="appVersionBadge" class="badge">StormDeck bundle browser v0.4</span>
     </div>
   </header>
 
@@ -228,6 +235,7 @@
           <option value="fit">Fit</option>
           <option value="native">Native</option>
           <option value="zoom2">2x</option>
+          <option value="zoom3">3x</option>
         </select>
         <button id="fullscreenImage" type="button">Fullscreen</button>
       </div>
@@ -241,10 +249,16 @@
           <button id="copyQuicklook" class="quicklook-copy" type="button">copy quicklook path</button>
         </div>
         <div class="readout-grid" id="frameReadouts"></div>
+        <div class="playlist-controls" aria-label="Frame playlist navigation uses stormdeck_bundle_manifest.json order">
+          <button id="prevFrame" type="button">Frame ←</button>
+          <span id="playlistPosition" class="playlist-position">Frame playlist not loaded</span>
+          <button id="nextFrame" type="button">Frame →</button>
+        </div>
         <div id="fieldLegend" class="legend-panel" aria-live="polite"></div>
         <div id="frameInspector" class="legend-panel" aria-live="polite">
           <div class="legend-title">Frame playlist</div>
           <div class="mono">Load <span class="mono">stormdeck_bundle_manifest.json</span> to inspect engine playlist frames.</div>
+          <div id="playlistStrip" class="playlist-strip"></div>
         </div>
       </div>
     </section>
@@ -267,6 +281,7 @@
   <!-- Contract path: volumes/<volume_id>/quicklooks/<sweep>_<field>.png -->
   <!-- Expected ready summary example: READY · 2 volumes · 84 quicklooks · 0 missing -->
   <!-- Expected engine summary example: Engine manifest · Frames: 84 · Godot loader: json_plus_relative_png_paths -->
+  <!-- Expected playlist example: Frame 1 of 84; Frame playlist navigation uses stormdeck_bundle_manifest.json order -->
   <script>
     const FIELD_LEGENDS = {
       REF: {
@@ -345,6 +360,11 @@
 
     function formatSweepPosition(sweepName) {
       return `Sweep ${sweepIndexNumber(sweepName) + 1} of ${sweepCount()}`; // example: Sweep 1 of 14
+    }
+
+    function formatSweepIndexLabel(sweepName) {
+      const index = sweepIndexNumber(sweepName);
+      return `Index ${index} · Sweep ${index + 1} of ${sweepCount()}`; // example: Index 0 · Sweep 1 of 14
     }
 
     function renderFieldLegend() {
@@ -434,6 +454,50 @@
       return frames.find((frame) => frame.volume_id === bundleState.volumeId && frame.sweep_name === bundleState.sweep && frame.field === bundleState.field) || null;
     }
 
+    function currentEngineFrameIndex() {
+      const frames = bundleState.engineManifest?.frames || [];
+      return frames.findIndex((frame) => frame.volume_id === bundleState.volumeId && frame.sweep_name === bundleState.sweep && frame.field === bundleState.field);
+    }
+
+    function selectEngineFrameByIndex(index) {
+      const frames = bundleState.engineManifest?.frames || [];
+      if (!frames.length) return;
+      const bounded = Math.max(0, Math.min(frames.length - 1, index));
+      const frame = frames[bounded];
+      bundleState.volumeId = frame.volume_id;
+      bundleState.field = frame.field;
+      bundleState.sweep = frame.sweep_name;
+      renderControls();
+      renderFrame();
+    }
+
+    function stepFrame(delta) {
+      const frames = bundleState.engineManifest?.frames || [];
+      if (!frames.length) return;
+      const current = currentEngineFrameIndex();
+      const next = current < 0 ? 0 : Math.max(0, Math.min(frames.length - 1, current + delta));
+      selectEngineFrameByIndex(next);
+    }
+
+    function renderPlaylistStrip() {
+      const frames = bundleState.engineManifest?.frames || [];
+      const current = currentEngineFrameIndex();
+      const frameCount = frames.length || bundleState.engineManifest?.frame_count || 0;
+      $('playlistPosition').textContent = current >= 0 ? `Frame ${current + 1} of ${frameCount}` : (frameCount ? `Frame 1 of ${frameCount}` : 'Frame playlist not loaded');
+      if (!$('playlistStrip')) return;
+      if (!frames.length) {
+        $('playlistStrip').innerHTML = '';
+        return;
+      }
+      const start = Math.max(0, (current < 0 ? 0 : current) - 2);
+      const preview = frames.slice(start, start + 5);
+      $('playlistStrip').innerHTML = preview.map((frame, offset) => {
+        const index = start + offset;
+        const active = index === current ? ' active' : '';
+        return `<div class="playlist-frame${active}">#${index + 1} · ${escapeHtml(frame.frame_id)} · ${escapeHtml(frame.quicklook_path)}</div>`;
+      }).join('');
+    }
+
     function renderFrameInspector() {
       const frame = findEngineFrame();
       const manifest = bundleState.engineManifest;
@@ -441,7 +505,9 @@
         $('frameInspector').innerHTML = `
           <div class="legend-title">Frame playlist</div>
           <div class="mono">Load <span class="mono">stormdeck_bundle_manifest.json</span> to inspect engine playlist frames.</div>
+          <div id="playlistStrip" class="playlist-strip"></div>
         `;
+        renderPlaylistStrip();
         return;
       }
       $('frameInspector').innerHTML = `
@@ -452,13 +518,15 @@
           <div class="mini-row"><strong>Texture:</strong> ${escapeHtml(frame?.quicklook_path || '—')}</div>
           <div class="mini-row"><strong>Limit:</strong> ${escapeHtml(frame?.interpretation_limit || 'sample_browse_only_not_time_continuous_storm_motion')}</div>
         </div>
+        <div id="playlistStrip" class="playlist-strip"></div>
       `;
+      renderPlaylistStrip();
     }
 
     function setFitMode(mode) {
       bundleState.fitMode = mode || 'fit';
       const frame = $('imageFrame');
-      frame.classList.remove('fit', 'native', 'zoom2');
+      frame.classList.remove('fit', 'native', 'zoom2', 'zoom3');
       frame.classList.add(bundleState.fitMode);
     }
 
@@ -471,7 +539,7 @@
       }
       overlay.hidden = false;
       overlay.innerHTML = `
-        <div class="overlay-title">${escapeHtml(bundleState.field)} · ${escapeHtml(volume.scan_name || 'scan')} · ${escapeHtml(formatSweepPosition(bundleState.sweep))}</div>
+        <div class="overlay-title">${escapeHtml(bundleState.field)} · ${escapeHtml(volume.scan_name || 'scan')} · ${escapeHtml(formatSweepIndexLabel(bundleState.sweep))}</div>
         <div class="overlay-subtitle">Volume time: ${escapeHtml(volume.start_time || '—')} → ${escapeHtml(volume.end_time || '—')}</div>
         <div class="overlay-subtitle">Fixed angle: ${escapeHtml(formatAngleDeg(sweep.fixed_angle_deg, sweep.fixed_angle_type))} · ${escapeHtml(sweep.ray_count ?? '—')} × ${escapeHtml(sweep.gate_count ?? '—')} gates</div>
         <div class="overlay-subtitle">Observed quicklook; not gridded 3D rendering or time-continuous storm motion.</div>
@@ -555,7 +623,7 @@
       $('frameReadouts').innerHTML = [
         ['Volume', bundleState.volumeId || '—'],
         ['Field', bundleState.field],
-        ['Sweep', formatSweepPosition(bundleState.sweep)],
+        ['Sweep', formatSweepIndexLabel(bundleState.sweep)],
         ['Quicklook', path || '—'],
       ].map(([label, value]) => `<div class="readout"><div class="value mono" title="${escapeHtml(value)}">${escapeHtml(value)}</div><div class="label">${label}</div></div>`).join('');
       renderFieldLegend();
@@ -593,10 +661,14 @@
     $('copyQuicklook').addEventListener('click', copyQuicklookPath);
     $('fitModeSelect').addEventListener('change', () => setFitMode($('fitModeSelect').value));
     $('fullscreenImage').addEventListener('click', () => $('imageFrame').requestFullscreen?.());
+    $('prevFrame').addEventListener('click', () => stepFrame(-1));
+    $('nextFrame').addEventListener('click', () => stepFrame(1));
     document.addEventListener('keydown', (event) => {
       if (event.target.matches('input, select, button')) return;
       if (event.key === 'ArrowLeft') stepSweep(-1);
       if (event.key === 'ArrowRight') stepSweep(1);
+      if (event.key === '[') stepFrame(-1);
+      if (event.key === ']') stepFrame(1);
       if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
         const fields = ['REF', 'VEL', 'SW'];
         const direction = event.key === 'ArrowUp' ? -1 : 1;
