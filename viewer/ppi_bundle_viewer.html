@@ -119,6 +119,10 @@
     .validation-box.warn { border-color: rgba(255, 209, 102, 0.30); background: rgba(255, 209, 102, 0.06); }
     .validation-status { display: inline-flex; border-radius: 999px; padding: 3px 8px; border: 1px solid rgba(156, 240, 188, 0.28); color: var(--accent-2); font-size: 11px; margin-bottom: 6px; }
     .validation-status.warn { border-color: rgba(255, 209, 102, 0.32); color: var(--warn); }
+    .manifest-box { margin-top: 10px; border: 1px solid rgba(121, 210, 255, 0.18); border-radius: 12px; padding: 10px; background: rgba(121, 210, 255, 0.045); }
+    .manifest-box.warn { border-color: rgba(255, 209, 102, 0.30); background: rgba(255, 209, 102, 0.06); }
+    .mini-list { margin-top: 8px; display: grid; gap: 5px; }
+    .mini-row { color: var(--muted); font-size: 12px; border-top: 1px solid rgba(180,200,230,0.08); padding-top: 5px; }
     .legend-panel { margin-top: 12px; border: 1px solid rgba(180, 200, 230, 0.10); border-radius: 12px; padding: 10px; background: rgba(255,255,255,0.022); }
     .legend-compact { display: grid; grid-template-columns: repeat(auto-fit, minmax(72px, 1fr)); gap: 6px; }
     .empty-state { color: var(--muted); padding: 24px; text-align: center; }
@@ -173,6 +177,7 @@
       <span class="badge good">observed quicklooks</span>
       <span class="badge warn">sample/browse bundle</span>
       <span class="badge">not a time-continuous storm sequence</span>
+      <span id="appVersionBadge" class="badge">StormDeck bundle browser v0.3</span>
     </div>
   </header>
 
@@ -189,6 +194,10 @@
       <div id="validationSummary" class="validation-box warn">
         <div id="validationStatusBadge" class="validation-status warn">validation not loaded</div>
         <div class="mono">Looks for <span class="mono">bundle_validation.json</span> after loading the index.</div>
+      </div>
+      <div id="manifestSummary" class="manifest-box warn">
+        <div id="engineManifestBadge" class="validation-status warn">engine manifest not loaded</div>
+        <div class="mono">Looks for <span class="mono">stormdeck_bundle_manifest.json</span>; expected schema <span class="mono">stormdeck.bundle_manifest.v0</span>.</div>
       </div>
       <div class="control">
         <label for="volumeSelect">Volume</label>
@@ -233,6 +242,10 @@
         </div>
         <div class="readout-grid" id="frameReadouts"></div>
         <div id="fieldLegend" class="legend-panel" aria-live="polite"></div>
+        <div id="frameInspector" class="legend-panel" aria-live="polite">
+          <div class="legend-title">Frame playlist</div>
+          <div class="mono">Load <span class="mono">stormdeck_bundle_manifest.json</span> to inspect engine playlist frames.</div>
+        </div>
       </div>
     </section>
 
@@ -253,6 +266,7 @@
 
   <!-- Contract path: volumes/<volume_id>/quicklooks/<sweep>_<field>.png -->
   <!-- Expected ready summary example: READY · 2 volumes · 84 quicklooks · 0 missing -->
+  <!-- Expected engine summary example: Engine manifest · Frames: 84 · Godot loader: json_plus_relative_png_paths -->
   <script>
     const FIELD_LEGENDS = {
       REF: {
@@ -282,6 +296,7 @@
       field: 'REF',
       sweep: 'sweep_0',
       validation: null,
+      engineManifest: null,
       fitMode: 'fit',
     };
 
@@ -388,6 +403,58 @@
       $('validationSummary').className = ready ? 'validation-box' : 'validation-box warn';
     }
 
+    async function loadEngineManifest() {
+      const manifestPath = joinPath(bundleState.root, 'stormdeck_bundle_manifest.json');
+      try {
+        const manifest = await fetchJson(manifestPath);
+        bundleState.engineManifest = manifest;
+      } catch (error) {
+        bundleState.engineManifest = { schema: 'not_loaded', error: error.message };
+      }
+      renderEngineManifestSummary();
+    }
+
+    function renderEngineManifestSummary() {
+      const manifest = bundleState.engineManifest || { schema: 'not_loaded' };
+      const ready = manifest.schema === 'stormdeck.bundle_manifest.v0';
+      const validationStatus = manifest.validation?.status || 'unknown';
+      const loader = manifest.consumer_hints?.godot_resource_loader || '—';
+      const text = ready
+        ? `Engine manifest · Frames: ${manifest.frame_count} · Godot loader: ${loader} · validation: ${validationStatus}`
+        : `${String(manifest.schema || 'not_loaded').toUpperCase()} · ${manifest.error || 'stormdeck_bundle_manifest.json unavailable'}`;
+      $('engineManifestBadge').textContent = ready ? 'stormdeck.bundle_manifest.v0 loaded' : 'engine manifest not loaded';
+      $('engineManifestBadge').className = ready ? 'validation-status' : 'validation-status warn';
+      $('manifestSummary').className = ready ? 'manifest-box' : 'manifest-box warn';
+      $('manifestSummary').querySelector('.mono').textContent = text;
+      renderFrameInspector();
+    }
+
+    function findEngineFrame() {
+      const frames = bundleState.engineManifest?.frames || [];
+      return frames.find((frame) => frame.volume_id === bundleState.volumeId && frame.sweep_name === bundleState.sweep && frame.field === bundleState.field) || null;
+    }
+
+    function renderFrameInspector() {
+      const frame = findEngineFrame();
+      const manifest = bundleState.engineManifest;
+      if (!manifest || manifest.schema !== 'stormdeck.bundle_manifest.v0') {
+        $('frameInspector').innerHTML = `
+          <div class="legend-title">Frame playlist</div>
+          <div class="mono">Load <span class="mono">stormdeck_bundle_manifest.json</span> to inspect engine playlist frames.</div>
+        `;
+        return;
+      }
+      $('frameInspector').innerHTML = `
+        <div class="legend-title">Frame playlist <span class="mono">stormdeck.bundle_manifest.v0</span></div>
+        <div class="mono">Frames: ${escapeHtml(manifest.frame_count)} · Fields: ${escapeHtml((manifest.fields || []).join(', '))} · Godot loader: ${escapeHtml(manifest.consumer_hints?.godot_resource_loader || 'json_plus_relative_png_paths')}</div>
+        <div class="mini-list">
+          <div class="mini-row"><strong>Selected frame:</strong> ${escapeHtml(frame?.frame_id || 'not found in engine manifest')}</div>
+          <div class="mini-row"><strong>Texture:</strong> ${escapeHtml(frame?.quicklook_path || '—')}</div>
+          <div class="mini-row"><strong>Limit:</strong> ${escapeHtml(frame?.interpretation_limit || 'sample_browse_only_not_time_continuous_storm_motion')}</div>
+        </div>
+      `;
+    }
+
     function setFitMode(mode) {
       bundleState.fitMode = mode || 'fit';
       const frame = $('imageFrame');
@@ -434,6 +501,7 @@
       bundleState.volumeId = volumeIdFromFile(index.volumes?.[0]?.file);
       bundleState.sweep = 'sweep_0';
       await loadValidationReport();
+      await loadEngineManifest();
       renderControls();
       renderFrame();
       setStatus(`Loaded ${index.volume_count ?? index.volumes?.length ?? 0} PPI volumes from ${indexPath}`);
@@ -491,6 +559,7 @@
         ['Quicklook', path || '—'],
       ].map(([label, value]) => `<div class="readout"><div class="value mono" title="${escapeHtml(value)}">${escapeHtml(value)}</div><div class="label">${label}</div></div>`).join('');
       renderFieldLegend();
+      renderFrameInspector();
       $('metadataPanel').innerHTML = [
         ['Schema', bundleState.index?.schema || '—'],
         ['Case', bundleState.index?.case_id || '—'],
@@ -503,6 +572,7 @@
         ['Range last', sweep?.range?.last_gate_m ? formatRangeKm(sweep.range.last_gate_m) : '—'],
         ['Nyquist', sweep?.nyquist_velocity?.median_mps ? `${Number(sweep.nyquist_velocity.median_mps).toFixed(2)} m/s` : '—'],
         ['Manifest', manifest?.error ? `ERROR: ${manifest.error}` : 'loaded'],
+        ['Engine manifest', bundleState.engineManifest?.schema === 'stormdeck.bundle_manifest.v0' ? `${bundleState.engineManifest.frame_count} frames` : 'not loaded'],
       ].map(([term, value]) => `<dt>${escapeHtml(term)}</dt><dd class="mono" title="${escapeHtml(value)}">${escapeHtml(value)}</dd>`).join('');
     }
 

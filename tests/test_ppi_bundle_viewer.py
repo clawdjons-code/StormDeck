@@ -107,3 +107,33 @@ def test_ppi_bundle_viewer_has_zoom_fit_overlay_and_validation_summary():
     assert "Volume time" in html
     assert "Fixed angle" in html
     assert "Observed quicklook; not gridded" in html
+
+
+def test_ppi_bundle_viewer_loads_engine_manifest_and_inspects_playlist():
+    html = VIEWER.read_text(encoding="utf-8")
+
+    for element_id in [
+        "appVersionBadge",
+        "manifestSummary",
+        "engineManifestBadge",
+        "frameInspector",
+    ]:
+        assert f'id="{element_id}"' in html
+    for text in [
+        "stormdeck_bundle_manifest.json",
+        "Engine manifest",
+        "Frame playlist",
+        "Godot loader",
+        "stormdeck.bundle_manifest.v0",
+        "json_plus_relative_png_paths",
+        "Frames: 84",
+        "StormDeck bundle browser v0.3",
+    ]:
+        assert text in html
+    for helper in [
+        "loadEngineManifest",
+        "renderEngineManifestSummary",
+        "renderFrameInspector",
+        "findEngineFrame",
+    ]:
+        assert helper in html
