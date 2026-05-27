@@ -25,7 +25,7 @@
       min-height: 100vh;
       background: radial-gradient(circle at 18% 0%, rgba(121, 210, 255, 0.12), transparent 30rem), var(--bg);
       color: var(--ink);
-      font: 14px/1.45 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font: 16px/1.5 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
     header {
       display: grid;
@@ -40,23 +40,23 @@
       z-index: 2;
       backdrop-filter: blur(14px);
     }
-    h1 { margin: 0; font-size: 18px; font-weight: 650; letter-spacing: -0.02em; }
-    .subtitle { margin-top: 3px; color: var(--muted); font-size: 12px; }
-    .badge-row { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+    h1 { margin: 0; font-size: 22px; font-weight: 650; letter-spacing: -0.02em; }
+    .subtitle { margin-top: 4px; color: var(--muted); font-size: 14px; }
+    .badge-row { display: flex; flex-wrap: wrap; gap: 12px; justify-content: flex-end; }
     .badge {
       display: inline-flex;
       align-items: center;
       border: 1px solid var(--border);
       border-radius: 999px;
-      padding: 6px 9px;
+      padding: 8px 12px;
       color: var(--muted);
       background: rgba(255,255,255,0.03);
-      font-size: 12px;
+      font-size: 14px;
       white-space: nowrap;
     }
     .badge.good { color: var(--accent-2); border-color: rgba(156, 240, 188, 0.32); }
     .badge.warn { color: var(--warn); border-color: rgba(255, 209, 102, 0.32); }
-    main { display: grid; grid-template-columns: 340px minmax(0, 1fr) 360px; gap: 14px; padding: 14px; }
+    main { display: grid; grid-template-columns: 300px minmax(620px, 1fr) 320px; gap: 16px; padding: 16px; }
     .panel {
       background: linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.025));
       border: 1px solid var(--border);
@@ -64,17 +64,17 @@
       padding: 14px;
       min-width: 0;
     }
-    .panel h2 { margin: 0 0 10px; font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.09em; }
+    .panel h2 { margin: 0 0 12px; font-size: 15px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.09em; }
     .control { display: grid; gap: 6px; margin-bottom: 12px; }
-    label { color: var(--muted); font-size: 12px; }
+    label { color: var(--muted); font-size: 14px; }
     select, button, input[type="text"] {
       width: 100%;
-      min-height: 38px;
+      min-height: 42px;
       border: 1px solid var(--border);
       background: #0b0f13;
       color: var(--ink);
       border-radius: 10px;
-      padding: 8px 10px;
+      padding: 9px 12px;
       font: inherit;
     }
     button { cursor: pointer; background: #13202a; }
@@ -101,33 +101,33 @@
     .image-frame.zoom3 img { width: 300%; max-width: none; max-height: none; }
     .frame-overlay {
       position: absolute;
-      left: 12px;
-      top: 12px;
-      max-width: min(560px, calc(100% - 24px));
-      padding: 10px 12px;
+      left: 14px;
+      top: 14px;
+      max-width: min(720px, calc(100% - 28px));
+      padding: 14px 16px;
       border: 1px solid rgba(180, 200, 230, 0.16);
-      border-radius: 12px;
-      background: rgba(2, 3, 3, 0.72);
+      border-radius: 14px;
+      background: rgba(2, 3, 3, 0.86);
       color: var(--ink);
       backdrop-filter: blur(6px);
       pointer-events: none;
     }
-    .overlay-title { font-weight: 700; margin-bottom: 3px; }
-    .overlay-subtitle { color: var(--muted); font-size: 12px; }
+    .overlay-title { font-size: 18px; font-weight: 750; margin-bottom: 5px; }
+    .overlay-subtitle { color: var(--muted); font-size: 14px; }
     .viewer-toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
-    .viewer-toolbar select, .viewer-toolbar button { width: auto; min-height: 34px; }
+    .viewer-toolbar select, .viewer-toolbar button { width: auto; min-height: 42px; }
     .validation-box { margin-top: 12px; border: 1px solid rgba(156, 240, 188, 0.18); border-radius: 12px; padding: 10px; background: rgba(156, 240, 188, 0.045); }
     .validation-box.warn { border-color: rgba(255, 209, 102, 0.30); background: rgba(255, 209, 102, 0.06); }
-    .validation-status { display: inline-flex; border-radius: 999px; padding: 3px 8px; border: 1px solid rgba(156, 240, 188, 0.28); color: var(--accent-2); font-size: 11px; margin-bottom: 6px; }
+    .validation-status { display: inline-flex; border-radius: 999px; padding: 5px 10px; border: 1px solid rgba(156, 240, 188, 0.28); color: var(--accent-2); font-size: 13px; margin-bottom: 7px; }
     .validation-status.warn { border-color: rgba(255, 209, 102, 0.32); color: var(--warn); }
     .manifest-box { margin-top: 10px; border: 1px solid rgba(121, 210, 255, 0.18); border-radius: 12px; padding: 10px; background: rgba(121, 210, 255, 0.045); }
     .manifest-box.warn { border-color: rgba(255, 209, 102, 0.30); background: rgba(255, 209, 102, 0.06); }
     .mini-list { margin-top: 8px; display: grid; gap: 5px; }
-    .mini-row { color: var(--muted); font-size: 12px; border-top: 1px solid rgba(180,200,230,0.08); padding-top: 5px; }
+    .mini-row { color: var(--muted); font-size: 14px; border-top: 1px solid rgba(180,200,230,0.08); padding-top: 7px; }
     .legend-panel { margin-top: 12px; border: 1px solid rgba(180, 200, 230, 0.10); border-radius: 12px; padding: 10px; background: rgba(255,255,255,0.022); }
     .legend-compact { display: grid; grid-template-columns: repeat(auto-fit, minmax(72px, 1fr)); gap: 6px; }
     .empty-state { color: var(--muted); padding: 24px; text-align: center; }
-    .readout-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+    .readout-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
     .readout {
       border: 1px solid rgba(180, 200, 230, 0.10);
       border-radius: 12px;
@@ -135,8 +135,8 @@
       background: rgba(255,255,255,0.025);
       overflow-wrap: anywhere;
     }
-    .readout .value { font-size: 15px; font-weight: 650; }
-    .readout .label { margin-top: 3px; color: var(--dim); font-size: 11px; }
+    .readout .value { font-size: 17px; font-weight: 700; }
+    .readout .label { margin-top: 4px; color: var(--dim); font-size: 13px; }
     .warning {
       border: 1px solid rgba(255, 209, 102, 0.30);
       color: #ffe3a2;
@@ -145,27 +145,27 @@
       padding: 10px;
       margin-bottom: 12px;
     }
-    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
     dl { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 7px 10px; margin: 0; }
     dt { color: var(--dim); }
     dd { margin: 0; color: var(--ink); overflow-wrap: anywhere; }
     ul { margin: 0; padding-left: 18px; color: var(--muted); }
     li { margin: 6px 0; }
-    .status-line { color: var(--muted); font-size: 12px; }
+    .status-line { color: var(--muted); font-size: 14px; }
     .error { color: var(--bad); }
     .frame-toolbar { display: flex; gap: 8px; align-items: center; justify-content: space-between; margin-bottom: 10px; flex-wrap: wrap; }
     .legend-panel { margin-top: 12px; border: 1px solid rgba(180, 200, 230, 0.10); border-radius: 12px; padding: 10px; background: rgba(255,255,255,0.022); }
-    .legend-title { color: var(--muted); font-size: 12px; margin-bottom: 8px; }
+    .legend-title { color: var(--muted); font-size: 14px; margin-bottom: 10px; }
     .legend-row { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 8px; align-items: center; margin: 6px 0; }
     .legend-swatch { height: 10px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.18); background: var(--legend-color, #94a3b8); }
-    .legend-label { color: var(--muted); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11px; }
-    .quicklook-copy { max-width: 210px; min-height: 32px; padding: 6px 8px; font-size: 12px; }
+    .legend-label { color: var(--muted); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; }
+    .quicklook-copy { max-width: 230px; min-height: 38px; padding: 8px 10px; font-size: 13px; }
     .playlist-controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
-    .playlist-controls button { width: auto; min-height: 32px; padding: 6px 10px; }
+    .playlist-controls button { width: auto; min-height: 38px; padding: 8px 12px; }
     .playlist-position { color: var(--accent); font-weight: 700; }
     .playlist-strip { margin-top: 8px; display: grid; gap: 5px; }
-    .playlist-frame { color: var(--muted); font-size: 12px; border: 1px solid rgba(180,200,230,0.08); border-radius: 8px; padding: 5px 7px; background: rgba(255,255,255,0.018); }
-    .playlist-frame.active { color: var(--ink); border-color: rgba(121,210,255,0.34); background: rgba(121,210,255,0.08); }
+    .playlist-frame { color: var(--muted); font-size: 14px; border: 1px solid rgba(180,200,230,0.08); border-radius: 9px; padding: 8px 10px; background: rgba(255,255,255,0.018); }
+    .playlist-frame.active { color: var(--ink); border-color: rgba(121,210,255,0.55); border-width: 2px; background: rgba(121,210,255,0.12); box-shadow: inset 3px 0 0 var(--accent); }
     @media (max-width: 1180px) {
       main { grid-template-columns: 1fr; }
       header { grid-template-columns: 1fr; }
@@ -184,7 +184,7 @@
       <span class="badge good">observed quicklooks</span>
       <span class="badge warn">sample/browse bundle</span>
       <span class="badge">not a time-continuous storm sequence</span>
-      <span id="appVersionBadge" class="badge">StormDeck bundle browser v0.4</span>
+      <span id="appVersionBadge" class="badge">StormDeck bundle browser v0.5</span>
     </div>
   </header>
 
@@ -230,7 +230,7 @@
 
     <section class="viewer-shell">
       <div class="panel viewer-toolbar">
-        <div class="status-line">Image scale</div>
+        <div class="status-line">Center image scale | observed PPI quicklook | Browsing order, not storm evolution.</div>
         <select id="fitModeSelect" aria-label="Image fit mode">
           <option value="fit">Fit</option>
           <option value="native">Native</option>
@@ -282,6 +282,7 @@
   <!-- Expected ready summary example: READY · 2 volumes · 84 quicklooks · 0 missing -->
   <!-- Expected engine summary example: Engine manifest · Frames: 84 · Godot loader: json_plus_relative_png_paths -->
   <!-- Expected playlist example: Frame 1 of 84; Frame playlist navigation uses stormdeck_bundle_manifest.json order -->
+  <!-- Screenshot-readable layout: key frame identity remains legible in partial center-view screenshots. -->
   <script>
     const FIELD_LEGENDS = {
       REF: {
@@ -365,6 +366,15 @@
     function formatSweepIndexLabel(sweepName) {
       const index = sweepIndexNumber(sweepName);
       return `Index ${index} · Sweep ${index + 1} of ${sweepCount()}`; // example: Index 0 · Sweep 1 of 14
+    }
+
+    function formatPlaylistPosition() {
+      const frames = bundleState.engineManifest?.frames || [];
+      const current = currentEngineFrameIndex();
+      const frameCount = frames.length || bundleState.engineManifest?.frame_count || 0;
+      if (current >= 0) return `Frame ${current + 1} of ${frameCount}`; // test marker: Frame ${current + 1} of ${frameCount}
+      if (frameCount) return `Frame 1 of ${frameCount}`;
+      return 'Frame playlist not loaded';
     }
 
     function renderFieldLegend() {
@@ -483,7 +493,7 @@
       const frames = bundleState.engineManifest?.frames || [];
       const current = currentEngineFrameIndex();
       const frameCount = frames.length || bundleState.engineManifest?.frame_count || 0;
-      $('playlistPosition').textContent = current >= 0 ? `Frame ${current + 1} of ${frameCount}` : (frameCount ? `Frame 1 of ${frameCount}` : 'Frame playlist not loaded');
+      $('playlistPosition').textContent = formatPlaylistPosition();
       if (!$('playlistStrip')) return;
       if (!frames.length) {
         $('playlistStrip').innerHTML = '';
@@ -493,8 +503,10 @@
       const preview = frames.slice(start, start + 5);
       $('playlistStrip').innerHTML = preview.map((frame, offset) => {
         const index = start + offset;
-        const active = index === current ? ' active' : '';
-        return `<div class="playlist-frame${active}">#${index + 1} · ${escapeHtml(frame.frame_id)} · ${escapeHtml(frame.quicklook_path)}</div>`;
+        const isActive = index === current;
+        const frameClass = isActive ? 'playlist-frame active' : 'playlist-frame';
+        const activeLabel = isActive ? 'CURRENT · #' : '#';
+        return `<div class="${frameClass}">${activeLabel}${index + 1} · ${escapeHtml(frame.frame_id)} · ${escapeHtml(frame.quicklook_path)}</div>`;
       }).join('');
     }
 
@@ -539,10 +551,10 @@
       }
       overlay.hidden = false;
       overlay.innerHTML = `
-        <div class="overlay-title">${escapeHtml(bundleState.field)} · ${escapeHtml(volume.scan_name || 'scan')} · ${escapeHtml(formatSweepIndexLabel(bundleState.sweep))}</div>
+        <div class="overlay-title">${escapeHtml(bundleState.field)} · ${escapeHtml(formatPlaylistPosition())} · ${escapeHtml(volume.scan_name || 'scan')} · ${escapeHtml(formatSweepIndexLabel(bundleState.sweep))}</div>
         <div class="overlay-subtitle">Volume time: ${escapeHtml(volume.start_time || '—')} → ${escapeHtml(volume.end_time || '—')}</div>
         <div class="overlay-subtitle">Fixed angle: ${escapeHtml(formatAngleDeg(sweep.fixed_angle_deg, sweep.fixed_angle_type))} · ${escapeHtml(sweep.ray_count ?? '—')} × ${escapeHtml(sweep.gate_count ?? '—')} gates</div>
-        <div class="overlay-subtitle">Observed quicklook; not gridded 3D rendering or time-continuous storm motion.</div>
+        <div class="overlay-subtitle">Observed quicklook; not gridded 3D rendering; sample/browse only; not time-continuous storm motion.</div>
       `;
     }
 
@@ -621,10 +633,10 @@
       setFitMode(bundleState.fitMode);
       renderFrameOverlay(volume, sweep);
       $('frameReadouts').innerHTML = [
-        ['Volume', bundleState.volumeId || '—'],
+        ['Playlist position', formatPlaylistPosition()],
         ['Field', bundleState.field],
         ['Sweep', formatSweepIndexLabel(bundleState.sweep)],
-        ['Quicklook', path || '—'],
+        ['Volume / quicklook', `${bundleState.volumeId || '—'} · ${path || '—'}`],
       ].map(([label, value]) => `<div class="readout"><div class="value mono" title="${escapeHtml(value)}">${escapeHtml(value)}</div><div class="label">${label}</div></div>`).join('');
       renderFieldLegend();
       renderFrameInspector();

@@ -127,7 +127,7 @@ def test_ppi_bundle_viewer_loads_engine_manifest_and_inspects_playlist():
         "stormdeck.bundle_manifest.v0",
         "json_plus_relative_png_paths",
         "Frames: 84",
-        "StormDeck bundle browser v0.4",
+        "StormDeck bundle browser v0.5",
     ]:
         assert text in html
     for helper in [
@@ -150,7 +150,7 @@ def test_ppi_bundle_viewer_v04_has_frame_playlist_navigation_and_clear_sweep_ind
     ]:
         assert f'id="{element_id}"' in html
     for text in [
-        "StormDeck bundle browser v0.4",
+        "StormDeck bundle browser v0.5",
         "Frame 1 of 84",
         "Index 0 · Sweep 1 of 14",
         "3x",
@@ -167,3 +167,76 @@ def test_ppi_bundle_viewer_v04_has_frame_playlist_navigation_and_clear_sweep_ind
         "renderPlaylistStrip",
     ]:
         assert helper in html
+
+
+def test_ppi_bundle_viewer_v05_prioritizes_screenshot_readability():
+    html = VIEWER.read_text(encoding="utf-8")
+
+    for text in [
+        "StormDeck bundle browser v0.5",
+        "Screenshot-readable layout",
+        "Center image scale",
+        "Browsing order, not storm evolution",
+    ]:
+        assert text in html
+
+    for css in [
+        "font: 16px/1.5",
+        "font-size: 22px",
+        "padding: 8px 12px",
+        "minmax(620px, 1fr)",
+        "font-size: 18px",
+    ]:
+        assert css in html
+
+
+def test_ppi_bundle_viewer_v05_center_overlay_contains_frame_identity_and_caveat():
+    html = VIEWER.read_text(encoding="utf-8")
+
+    for helper in [
+        "formatPlaylistPosition",
+        "renderFrameOverlay",
+        "currentEngineFrameIndex",
+    ]:
+        assert helper in html
+
+    for text in [
+        "Frame ${current + 1} of ${frameCount}",
+        "Observed quicklook",
+        "sample/browse only",
+        "not time-continuous storm motion",
+        "Index 0 · Sweep 1 of 14",
+    ]:
+        assert text in html
+
+
+def test_ppi_bundle_viewer_v05_playlist_active_frame_is_explicit():
+    html = VIEWER.read_text(encoding="utf-8")
+
+    for text in [
+        "CURRENT · #",
+        "playlist-frame active",
+        "Frame playlist navigation uses stormdeck_bundle_manifest.json order",
+    ]:
+        assert text in html
+
+    for css in [
+        "box-shadow: inset 3px 0 0 var(--accent)",
+        "font-size: 14px",
+    ]:
+        assert css in html
+
+
+def test_ppi_bundle_viewer_v05_current_frame_readouts_show_playlist_position():
+    html = VIEWER.read_text(encoding="utf-8")
+
+    for text in [
+        "Playlist position",
+        "Frame",
+        "Field",
+        "Sweep",
+        "Volume / quicklook",
+    ]:
+        assert text in html
+
+    assert "formatPlaylistPosition()" in html
