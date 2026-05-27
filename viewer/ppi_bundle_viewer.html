@@ -166,6 +166,20 @@
     .playlist-strip { margin-top: 8px; display: grid; gap: 5px; }
     .playlist-frame { color: var(--muted); font-size: 14px; border: 1px solid rgba(180,200,230,0.08); border-radius: 9px; padding: 8px 10px; background: rgba(255,255,255,0.018); }
     .playlist-frame.active { color: var(--ink); border-color: rgba(121,210,255,0.55); border-width: 2px; background: rgba(121,210,255,0.12); box-shadow: inset 3px 0 0 var(--accent); }
+    .readiness-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    .readiness-card { border: 1px solid rgba(180,200,230,0.10); border-radius: 12px; padding: 10px; background: rgba(255,255,255,0.024); }
+    .readiness-card .value { font-size: 16px; font-weight: 750; }
+    .semantic-object { border: 1px solid rgba(180,200,230,0.10); border-radius: 12px; padding: 10px; margin-top: 8px; background: rgba(255,255,255,0.024); }
+    .mode-badge { display: none; color: var(--warn); font-weight: 800; letter-spacing: 0.06em; }
+    body.demo-screenshot-mode main { grid-template-columns: minmax(820px, 1fr); }
+    body.demo-screenshot-mode aside { display: none; }
+    body.demo-screenshot-mode header { position: static; padding: 10px 18px; }
+    body.demo-screenshot-mode .viewer-shell { max-width: 1400px; width: 100%; margin: 0 auto; }
+    body.demo-screenshot-mode .image-frame { min-height: 82vh; }
+    body.demo-screenshot-mode .frame-overlay { max-width: min(980px, calc(100% - 28px)); padding: 18px 20px; }
+    body.demo-screenshot-mode .overlay-title { font-size: 26px; }
+    body.demo-screenshot-mode .overlay-subtitle { font-size: 18px; }
+    body.demo-screenshot-mode .mode-badge { display: inline-flex; }
     @media (max-width: 1180px) {
       main { grid-template-columns: 1fr; }
       header { grid-template-columns: 1fr; }
@@ -230,13 +244,14 @@
 
     <section class="viewer-shell">
       <div class="panel viewer-toolbar">
-        <div class="status-line">Center image scale | observed PPI quicklook | Browsing order, not storm evolution.</div>
+        <div class="status-line">Center image scale | observed PPI quicklook | Browsing order, not storm evolution. <span id="screenshotModeBadge" class="mode-badge">SCREENSHOT MODE · center viewport prioritized</span></div>
         <select id="fitModeSelect" aria-label="Image fit mode">
           <option value="fit">Fit</option>
           <option value="native">Native</option>
           <option value="zoom2">2x</option>
           <option value="zoom3">3x</option>
         </select>
+        <button id="demoScreenshotMode" type="button" aria-pressed="false">Demo screenshot mode</button>
         <button id="fullscreenImage" type="button">Fullscreen</button>
       </div>
       <div class="image-frame fit" id="imageFrame">
@@ -268,6 +283,24 @@
       <dl id="metadataPanel">
         <dt>Status</dt><dd>Awaiting bundle load.</dd>
       </dl>
+      <section id="bundleReadinessPanel" class="legend-panel" aria-live="polite">
+        <h2>Bundle readiness</h2>
+        <div class="readiness-grid">
+          <div class="readiness-card"><div class="label">Validation</div><div id="readinessValidation" class="value">manual selection required / not loaded</div></div>
+          <div class="readiness-card"><div class="label">Engine manifest</div><div id="readinessEngineManifest" class="value">not loaded</div></div>
+          <div class="readiness-card"><div class="label">Volumes</div><div id="readinessVolumes" class="value">not loaded</div></div>
+          <div class="readiness-card"><div class="label">Frames</div><div id="readinessFrames" class="value">not loaded</div></div>
+          <div class="readiness-card"><div class="label">Quicklooks</div><div id="readinessQuicklooks" class="value">not loaded</div></div>
+          <div class="readiness-card"><div class="label">Missing quicklooks</div><div id="readinessMissingQuicklooks" class="value">not loaded</div></div>
+          <div class="readiness-card"><div class="label">Semantic objects</div><div id="readinessSemanticObjects" class="value">semantic objects not loaded</div></div>
+        </div>
+      </section>
+      <section id="semanticObjectsPanel" class="legend-panel" aria-live="polite">
+        <h2>Semantic storm objects</h2>
+        <div id="semanticObjectsStatus" class="validation-status warn">semantic objects not loaded</div>
+        <div class="mono">Optional <span class="mono">semantic_objects.json</span>; expected schema <span class="mono">stormdeck.semantic_objects.v0</span>. manual/sample/inferred annotations are not observed radar data.</div>
+        <div id="semanticObjectsList" class="mini-list"></div>
+      </section>
       <h2 style="margin-top:18px">Operational caveats</h2>
       <ul>
         <li>Observed PPI quicklook PNGs only; not gridded 3D volume rendering.</li>
@@ -313,6 +346,7 @@
       sweep: 'sweep_0',
       validation: null,
       engineManifest: null,
+      semanticObjects: null,
       fitMode: 'fit',
     };
 
@@ -431,6 +465,26 @@
       $('validationStatusBadge').textContent = text;
       $('validationStatusBadge').className = ready ? 'validation-status' : 'validation-status warn';
       $('validationSummary').className = ready ? 'validation-box' : 'validation-box warn';
+      renderBundleReadiness();
+    }
+
+    function readinessValue(value, fallback = 'manual selection required / not loaded') {
+      return value === undefined || value === null || value === '' ? fallback : String(value);
+    }
+
+    function renderBundleReadiness() {
+      const validation = bundleState.validation || { status: 'not_loaded' };
+      const engine = bundleState.engineManifest || { schema: 'not_loaded' };
+      const semantic = bundleState.semanticObjects || { status: 'not_loaded' };
+      $('readinessValidation').textContent = validation.status === 'ready' ? 'ready' : readinessValue(validation.status);
+      $('readinessEngineManifest').textContent = engine.schema === 'stormdeck.bundle_manifest.v0' ? 'loaded' : 'not loaded';
+      $('readinessVolumes').textContent = readinessValue(bundleState.index?.volume_count ?? bundleState.index?.volumes?.length, 'not loaded');
+      $('readinessFrames').textContent = readinessValue(engine.frame_count, 'not loaded');
+      $('readinessQuicklooks').textContent = readinessValue(validation.quicklook_count, 'not loaded');
+      $('readinessMissingQuicklooks').textContent = readinessValue(validation.missing_quicklook_count, 'not loaded');
+      $('readinessSemanticObjects').textContent = semantic.schema === 'stormdeck.semantic_objects.v0'
+        ? `${semantic.objects?.length || 0} manual/sample annotations`
+        : 'semantic objects not loaded';
     }
 
     async function loadEngineManifest() {
@@ -456,6 +510,7 @@
       $('engineManifestBadge').className = ready ? 'validation-status' : 'validation-status warn';
       $('manifestSummary').className = ready ? 'manifest-box' : 'manifest-box warn';
       $('manifestSummary').querySelector('.mono').textContent = text;
+      renderBundleReadiness();
       renderFrameInspector();
     }
 
@@ -535,11 +590,56 @@
       renderPlaylistStrip();
     }
 
+    async function loadSemanticObjects() {
+      const semanticPath = joinPath(bundleState.root, 'semantic_objects.json');
+      try {
+        const objects = await fetchJson(semanticPath);
+        bundleState.semanticObjects = objects.schema === 'stormdeck.semantic_objects.v0'
+          ? objects
+          : { schema: objects.schema || 'unknown', status: 'not_loaded', error: `Unexpected schema: ${objects.schema}` };
+      } catch (error) {
+        bundleState.semanticObjects = { schema: 'not_loaded', status: 'not_loaded', error: error.message, objects: [] };
+      }
+      renderSemanticObjectsPanel();
+      renderBundleReadiness();
+    }
+
+    function semanticObjectRows() {
+      const source = bundleState.semanticObjects;
+      if (!source || source.schema !== 'stormdeck.semantic_objects.v0') return [];
+      return source.objects || [];
+    }
+
+    function renderSemanticObjectsPanel() {
+      const source = bundleState.semanticObjects || { schema: 'not_loaded', objects: [] };
+      const ready = source.schema === 'stormdeck.semantic_objects.v0';
+      const rows = semanticObjectRows();
+      $('semanticObjectsStatus').textContent = ready ? `${rows.length} semantic objects loaded` : 'semantic objects not loaded';
+      $('semanticObjectsStatus').className = ready ? 'validation-status' : 'validation-status warn';
+      $('semanticObjectsList').innerHTML = ready && rows.length
+        ? rows.map((object) => `
+          <div class="semantic-object">
+            <div><strong>${escapeHtml(object.label || 'manual/sample annotation')}</strong></div>
+            <div class="mono">object type: ${escapeHtml(object.object_type || object.type || '—')} · confidence: ${escapeHtml(object.confidence ?? '—')}</div>
+            <div class="mono">interpretation limit: ${escapeHtml(object.interpretation_limit || 'manual/sample annotation; not algorithmic detection')}</div>
+          </div>`).join('')
+        : `<div class="mono">semantic objects not loaded; optional manual/sample annotation file. Example wording: sample velocity couplet, manually annotated; not algorithmic detection. These manual/sample/inferred annotations are not observed radar data.</div>`;
+    }
+
     function setFitMode(mode) {
       bundleState.fitMode = mode || 'fit';
       const frame = $('imageFrame');
       frame.classList.remove('fit', 'native', 'zoom2', 'zoom3');
       frame.classList.add(bundleState.fitMode);
+    }
+
+    function setDemoScreenshotMode(enabled) {
+      document.body.classList.toggle('demo-screenshot-mode', Boolean(enabled));
+      $('demoScreenshotMode').setAttribute('aria-pressed', String(Boolean(enabled)));
+    }
+
+    function toggleDemoScreenshotMode() {
+      setDemoScreenshotMode(!document.body.classList.contains('demo-screenshot-mode'));
     }
 
     function renderFrameOverlay(volume, sweep) {
@@ -582,6 +682,7 @@
       bundleState.sweep = 'sweep_0';
       await loadValidationReport();
       await loadEngineManifest();
+      await loadSemanticObjects();
       renderControls();
       renderFrame();
       setStatus(`Loaded ${index.volume_count ?? index.volumes?.length ?? 0} PPI volumes from ${indexPath}`);
@@ -654,6 +755,7 @@
         ['Manifest', manifest?.error ? `ERROR: ${manifest.error}` : 'loaded'],
         ['Engine manifest', bundleState.engineManifest?.schema === 'stormdeck.bundle_manifest.v0' ? `${bundleState.engineManifest.frame_count} frames` : 'not loaded'],
       ].map(([term, value]) => `<dt>${escapeHtml(term)}</dt><dd class="mono" title="${escapeHtml(value)}">${escapeHtml(value)}</dd>`).join('');
+      renderBundleReadiness();
     }
 
     function stepSweep(delta) {
@@ -664,6 +766,11 @@
       renderFrame();
     }
 
+    const initialBundleRoot = new URLSearchParams(window.location.search).get('bundleRoot');
+    if (initialBundleRoot) $('bundleRoot').value = initialBundleRoot;
+    renderBundleReadiness();
+    renderSemanticObjectsPanel();
+
     $('loadBundle').addEventListener('click', () => loadBundle().catch((error) => setStatus(error.message, true)));
     volumeSelect.addEventListener('change', () => { bundleState.volumeId = volumeSelect.value; renderFrame(); });
     fieldSelect.addEventListener('change', () => { bundleState.field = fieldSelect.value; renderFrame(); });
@@ -672,6 +779,7 @@
     $('nextSweep').addEventListener('click', () => stepSweep(1));
     $('copyQuicklook').addEventListener('click', copyQuicklookPath);
     $('fitModeSelect').addEventListener('change', () => setFitMode($('fitModeSelect').value));
+    $('demoScreenshotMode').addEventListener('click', toggleDemoScreenshotMode);
     $('fullscreenImage').addEventListener('click', () => $('imageFrame').requestFullscreen?.());
     $('prevFrame').addEventListener('click', () => stepFrame(-1));
     $('nextFrame').addEventListener('click', () => stepFrame(1));
@@ -681,6 +789,7 @@
       if (event.key === 'ArrowRight') stepSweep(1);
       if (event.key === '[') stepFrame(-1);
       if (event.key === ']') stepFrame(1);
+      if (event.key.toLowerCase() === 'd') toggleDemoScreenshotMode();
       if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
         const fields = ['REF', 'VEL', 'SW'];
         const direction = event.key === 'ArrowUp' ? -1 : 1;

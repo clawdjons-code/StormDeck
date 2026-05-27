@@ -240,3 +240,67 @@ def test_ppi_bundle_viewer_v05_current_frame_readouts_show_playlist_position():
         assert text in html
 
     assert "formatPlaylistPosition()" in html
+
+
+def test_ppi_bundle_viewer_v06_has_operator_readiness_panel():
+    html = VIEWER.read_text(encoding="utf-8")
+
+    for element_id in [
+        "bundleReadinessPanel",
+        "readinessValidation",
+        "readinessEngineManifest",
+        "readinessVolumes",
+        "readinessFrames",
+        "readinessQuicklooks",
+        "readinessMissingQuicklooks",
+        "readinessSemanticObjects",
+    ]:
+        assert f'id="{element_id}"' in html
+    for text in [
+        "Bundle readiness",
+        "Validation",
+        "Engine manifest",
+        "Volumes",
+        "Frames",
+        "Quicklooks",
+        "Missing quicklooks",
+        "Semantic objects",
+        "manual selection required / not loaded",
+    ]:
+        assert text in html
+    for helper in ["renderBundleReadiness", "readinessValue"]:
+        assert helper in html
+
+
+def test_ppi_bundle_viewer_v06_demo_screenshot_mode_toggle():
+    html = VIEWER.read_text(encoding="utf-8")
+
+    assert 'id="demoScreenshotMode"' in html
+    assert "Demo screenshot mode" in html
+    assert "body.demo-screenshot-mode" in html
+    assert "SCREENSHOT MODE · center viewport prioritized" in html
+    for helper in ["toggleDemoScreenshotMode", "setDemoScreenshotMode"]:
+        assert helper in html
+
+
+def test_ppi_bundle_viewer_v06_loads_manual_semantic_objects_honestly():
+    html = VIEWER.read_text(encoding="utf-8")
+
+    for element_id in ["semanticObjectsPanel", "semanticObjectsStatus", "semanticObjectsList"]:
+        assert f'id="{element_id}"' in html
+    for text in [
+        "semantic_objects.json",
+        "stormdeck.semantic_objects.v0",
+        "semantic objects not loaded",
+        "Semantic storm objects",
+        "manual/sample annotation",
+        "confidence",
+        "object type",
+        "interpretation limit",
+        "sample velocity couplet",
+        "manually annotated; not algorithmic detection",
+        "manual/sample/inferred annotations are not observed radar data",
+    ]:
+        assert text in html
+    for helper in ["loadSemanticObjects", "renderSemanticObjectsPanel", "semanticObjectRows"]:
+        assert helper in html
