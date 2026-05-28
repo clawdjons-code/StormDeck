@@ -720,17 +720,43 @@
       return joinPath(bundleState.root, 'volumes', bundleState.volumeId, 'quicklooks', `${bundleState.sweep}_${bundleState.field}.png`);
     }
 
+    function resetFrameContents() {
+      const frame = $('imageFrame');
+      frame.replaceChildren();
+      const overlay = document.createElement('div');
+      overlay.id = 'frameOverlay';
+      overlay.className = 'frame-overlay';
+      overlay.hidden = true;
+      return { frame, overlay };
+    }
+
+    function renderFrameImage(path) {
+      const { frame, overlay } = resetFrameContents();
+      if (!path) {
+        const empty = document.createElement('div');
+        empty.className = 'empty-state';
+        empty.textContent = 'No quicklook selected.';
+        frame.append(empty, overlay);
+        return;
+      }
+      const img = document.createElement('img');
+      img.src = path;
+      img.alt = `${bundleState.volumeId} ${bundleState.sweep} ${bundleState.field} observed PPI quicklook`;
+      img.addEventListener('error', () => {
+        const error = document.createElement('div');
+        error.className = 'empty-state error';
+        error.textContent = `Missing quicklook: ${path}`;
+        img.replaceWith(error);
+      }, { once: true });
+      frame.append(img, overlay);
+    }
+
     function renderFrame() {
       const path = quicklookPath();
       const volume = currentVolume();
       const sweep = currentSweepManifest();
       const manifest = currentManifest();
-      const frame = $('imageFrame');
-      if (!path) {
-        frame.innerHTML = '<div class="empty-state">No quicklook selected.</div><div id="frameOverlay" class="frame-overlay" hidden></div>';
-      } else {
-        frame.innerHTML = `<img src="${path}" alt="${bundleState.volumeId} ${bundleState.sweep} ${bundleState.field} observed PPI quicklook" onerror="this.replaceWith(Object.assign(document.createElement('div'), {className:'empty-state error', textContent:'Missing quicklook: ${path}'}))"><div id="frameOverlay" class="frame-overlay" hidden></div>`;
-      }
+      renderFrameImage(path);
       setFitMode(bundleState.fitMode);
       renderFrameOverlay(volume, sweep);
       $('frameReadouts').innerHTML = [

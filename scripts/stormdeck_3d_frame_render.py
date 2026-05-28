@@ -27,6 +27,8 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
+from stormdeck_radar_arrays import masked_numeric_array
+
 FIELD_ALIASES: Dict[str, List[str]] = {
     "REF": ["REF", "DBZ", "DZ", "ZH", "reflectivity", "corrected_reflectivity"],
     "VEL": ["VEL", "VR", "V", "velocity", "radial_velocity"],
@@ -133,16 +135,7 @@ def infer_range_km(range_values: Any, units: Optional[str]) -> Any:
 
 
 def masked_data(np: Any, var: Any) -> Any:
-    arr = var[:]
-    if np.ma.isMaskedArray(arr):
-        out = arr.astype("float64").filled(np.nan)
-    else:
-        out = np.asarray(arr, dtype="float64")
-        fill = getattr(var, "_FillValue", None)
-        if fill is not None:
-            out[out == fill] = np.nan
-    out[out <= -9990] = np.nan
-    return out
+    return masked_numeric_array(var)
 
 
 def convert_cfile_if_needed(input_path: Path, out_dir: Path) -> Tuple[Path, Optional[Path]]:

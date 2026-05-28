@@ -39,6 +39,8 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
+from stormdeck_radar_arrays import masked_numeric_array
+
 
 def _require_runtime_deps() -> Tuple[Any, Any, Any, Any]:
     """Import heavy deps lazily so --help works on systems without them."""
@@ -141,17 +143,7 @@ def read_coord(np: Any, group: Any, logical_name: str) -> Tuple[str, Any]:
 
 
 def masked_data(np: Any, var: Any) -> Any:
-    arr = var[:]
-    if np.ma.isMaskedArray(arr):
-        out = arr.astype("float64").filled(np.nan)
-    else:
-        out = np.asarray(arr, dtype="float64")
-        fill = getattr(var, "_FillValue", None)
-        if fill is not None:
-            out[out == fill] = np.nan
-    # Common radar missing values. Conservative: only absurd sentinels.
-    out[out <= -9990] = np.nan
-    return out
+    return masked_numeric_array(var)
 
 
 def field_stats(np: Any, arr: Any, var: Any) -> Dict[str, Any]:

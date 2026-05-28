@@ -7,6 +7,8 @@ __pycache__/
 # Keep sample radar files off git unless deliberately moved to Git LFS or a release asset.
 data/
 renders/
+!docs/renders/
+!docs/renders/.gitkeep
 stormdeck_case_probe_export/
 
 # Local environment files

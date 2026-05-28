@@ -283,6 +283,17 @@ def test_ppi_bundle_viewer_v06_demo_screenshot_mode_toggle():
         assert helper in html
 
 
+def test_ppi_bundle_viewer_uses_dom_apis_for_untrusted_quicklook_paths():
+    html = VIEWER.read_text(encoding="utf-8")
+
+    assert "function renderFrameImage" in html
+    assert "document.createElement('img')" in html
+    assert "img.src = path" in html
+    assert "img.alt =" in html
+    assert 'frame.innerHTML = `<img src="${path}"' not in html
+    assert "onerror=\"this.replaceWith" not in html
+
+
 def test_ppi_bundle_viewer_v06_loads_manual_semantic_objects_honestly():
     html = VIEWER.read_text(encoding="utf-8")
 

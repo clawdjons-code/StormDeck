@@ -16,6 +16,8 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 import numpy as np
 
+from stormdeck_radar_arrays import masked_numeric_array
+
 
 FIELD_ALIASES: Dict[str, List[str]] = {
     "REF": ["REF", "DBZ", "DZ", "ZH", "reflectivity", "corrected_reflectivity"],
@@ -75,17 +77,7 @@ def canonical_field(group: Any, requested: str) -> Optional[str]:
 
 
 def read_masked_field(var: Any) -> np.ndarray:
-    arr = var[:]
-    if np.ma.isMaskedArray(arr):
-        out = arr.astype("float64").filled(np.nan)
-    else:
-        out = np.asarray(arr, dtype="float64")
-        fill = getattr(var, "_FillValue", None)
-        if fill is not None:
-            out[out == fill] = np.nan
-    # ATD/KATD moment fields often use -999.0 for censored gates.
-    out[out <= -999] = np.nan
-    return out
+    return masked_numeric_array(var)
 
 
 def finite_stats(arr: np.ndarray) -> Dict[str, Any]:

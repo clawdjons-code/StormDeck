@@ -23,6 +23,8 @@ from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
 import numpy as np
 
+from stormdeck_radar_arrays import masked_numeric_array
+
 # netCDF4 and Pillow are imported lazily so geometry unit tests can run in
 # lightweight environments. The operational target, wea-fs, has these packages.
 Dataset = None  # type: ignore
@@ -117,18 +119,7 @@ def read_float_array(group: Any, logical_name: str) -> Tuple[str, np.ndarray]:
 
 
 def read_masked_field(var: Any) -> np.ndarray:
-    arr = var[:]
-    if np.ma.isMaskedArray(arr):
-        out = arr.astype("float64").filled(np.nan)
-    else:
-        out = np.asarray(arr, dtype="float64")
-        fill = getattr(var, "_FillValue", None)
-        if fill is not None:
-            out[out == fill] = np.nan
-    # ATD moment fields commonly use -999.0 for unavailable gates; older preview
-    # script only treated absurd sentinels as missing, which polluted SW stats.
-    out[out <= -999] = np.nan
-    return out
+    return masked_numeric_array(var)
 
 
 def finite_stats(arr: np.ndarray) -> Dict[str, Any]:
