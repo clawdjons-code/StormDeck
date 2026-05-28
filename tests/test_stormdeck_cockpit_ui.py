@@ -150,6 +150,9 @@ def test_adaptive_view_sizing_sliders_are_available_and_stateful():
         "--future-fr",
         "--cross-row",
         "--bottom-row",
+        "--mobile-replay-row",
+        "--mobile-future-row",
+        "--mobile-bottom-card-row",
     ]:
         assert css_var in html
 
@@ -159,6 +162,10 @@ def test_adaptive_view_sizing_sliders_are_available_and_stateful():
         "crossHeightSlider.addEventListener",
         "bottomCardSlider.addEventListener",
         "resetLayoutButton.addEventListener",
+        "mobileReplayRow",
+        "--mobile-replay-row",
+        "--mobile-future-row",
+        "--mobile-bottom-card-row",
     ]:
         assert js_hook in html
 
@@ -178,6 +185,8 @@ def test_adaptive_sizing_controls_have_mobile_touch_layout():
         ".adaptive-sizing { min-width: 100%",
         ".slider-field { grid-template-columns: 76px minmax(120px, 1fr) 34px",
         "main { grid-template-columns: minmax(0, 1fr)",
+        "grid-template-rows: var(--mobile-replay-row) var(--cross-row) var(--mobile-future-row)",
+        "grid-auto-rows: var(--mobile-bottom-card-row)",
     ]:
         assert css_contract in html
 

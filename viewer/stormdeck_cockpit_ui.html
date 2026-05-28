@@ -25,6 +25,9 @@
       --future-fr: 40fr;
       --cross-row: 128px;
       --bottom-row: 64px;
+      --mobile-replay-row: 620px;
+      --mobile-future-row: 360px;
+      --mobile-bottom-card-row: 64px;
     }
     * { box-sizing: border-box; }
     body {
@@ -260,9 +263,9 @@
       .shell { grid-template-rows: auto auto auto; }
       header { flex-wrap: wrap; min-height: 42px; padding-block: 6px; }
       .adaptive-sizing { min-width: min(720px, 100%); }
-      main { grid-template-columns: minmax(0, 1fr); grid-template-rows: 620px 160px 560px; }
+      main { grid-template-columns: minmax(0, 1fr); grid-template-rows: var(--mobile-replay-row) var(--cross-row) var(--mobile-future-row); }
       .future { grid-column: 1; grid-row: auto; }
-      .bottom { grid-template-columns: 1fr; }
+      .bottom { grid-template-columns: 1fr; grid-auto-rows: var(--mobile-bottom-card-row); }
     }
     @media (max-width: 760px) {
       body { font-size: 13px; overflow-x: hidden; }
@@ -290,7 +293,7 @@
       .slider-field label, .slider-field output { font-size: 10px; }
       input[type="range"] { min-height: 28px; }
       .reset-layout { min-height: 30px; width: 100%; }
-      main { grid-template-columns: minmax(0, 1fr); grid-template-rows: 560px var(--cross-row) 460px; }
+      main { grid-template-columns: minmax(0, 1fr); grid-template-rows: var(--mobile-replay-row) var(--cross-row) var(--mobile-future-row); }
       .future { grid-column: 1; grid-row: auto; }
       .replay .panel-head { height: auto; min-height: 76px; align-items: flex-start; padding: 7px 8px; }
       .replay { grid-template-rows: auto minmax(0, 1fr) 56px; }
@@ -298,7 +301,7 @@
       .legend-card { right: 6px; width: 96px; transform: scale(.9); transform-origin: top right; }
       .slice-label { left: 18px; top: 204px; }
       .origin-label { left: 18px; bottom: 70px; }
-      .bottom { grid-template-columns: 1fr; }
+      .bottom { grid-template-columns: 1fr; grid-auto-rows: var(--mobile-bottom-card-row); }
     }
   </style>
 </head>
@@ -635,10 +638,15 @@
       const futureValue = 100 - replayValue;
       const crossValue = Number(crossHeightSlider.value);
       const bottomValue = Number(bottomCardSlider.value);
+      const mobileReplayRow = Math.round(500 + ((replayValue - 52) / 20) * 240);
+      const mobileFutureRow = Math.round(520 - ((replayValue - 52) / 20) * 220);
       document.documentElement.style.setProperty('--replay-fr', `${replayValue}fr`);
       document.documentElement.style.setProperty('--future-fr', `${futureValue}fr`);
       document.documentElement.style.setProperty('--cross-row', `${crossValue}px`);
       document.documentElement.style.setProperty('--bottom-row', `${bottomValue}px`);
+      document.documentElement.style.setProperty('--mobile-replay-row', `${mobileReplayRow}px`);
+      document.documentElement.style.setProperty('--mobile-future-row', `${mobileFutureRow}px`);
+      document.documentElement.style.setProperty('--mobile-bottom-card-row', `${bottomValue}px`);
       replayWidthValue.value = `${replayValue}%`;
       crossHeightValue.value = `${crossValue}`;
       bottomCardValue.value = `${bottomValue}`;
