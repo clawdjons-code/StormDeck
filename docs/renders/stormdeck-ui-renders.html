@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>StormDeck UI Concept Renders</title>
+<style>
+  :root { color-scheme: dark; }
+  html, body { margin:0; width:100%; height:100%; background:#05080d; font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif; color:#dce7f3; overflow:hidden; }
+  .frame { width:100vw; height:100vh; display:grid; grid-template-rows:64px 1fr 88px; background:radial-gradient(circle at 50% 18%, #172235 0%, #07101b 44%, #04070c 100%); }
+  .top { display:flex; align-items:center; gap:18px; padding:0 24px; border-bottom:1px solid #26354a; background:rgba(5,9,15,.92); box-shadow:0 10px 40px rgba(0,0,0,.3); }
+  .brand { font-weight:800; letter-spacing:.06em; color:#f4fbff; font-size:21px; }
+  .pill { border:1px solid #38506e; background:#101b2a; border-radius:999px; padding:7px 11px; font-size:12px; color:#aac0d6; }
+  .warn { color:#ffd173; border-color:#745f28; background:#241b09; }
+  .live { color:#8cffc4; border-color:#2d7f5f; background:#052018; }
+  .main { display:grid; grid-template-columns:340px 1fr 1fr 360px; gap:14px; padding:14px; min-height:0; }
+  .panel { border:1px solid #26384f; background:linear-gradient(180deg,rgba(13,22,35,.94),rgba(7,13,22,.96)); border-radius:14px; box-shadow:0 16px 55px rgba(0,0,0,.35); overflow:hidden; position:relative; }
+  .panel h2 { margin:0; padding:12px 14px; font-size:14px; letter-spacing:.045em; color:#e9f4ff; border-bottom:1px solid #26384f; background:rgba(10,18,29,.85); display:flex; justify-content:space-between; align-items:center; }
+  .sub { font-size:11px; color:#82a0bd; font-weight:600; letter-spacing:0; }
+  .leftnav { padding:14px; display:flex; flex-direction:column; gap:10px; }
+  .case { border:1px solid #2a3d56; border-radius:12px; background:#0a1421; padding:12px; }
+  .case b { color:#fff; }
+  .minirow { display:flex; justify-content:space-between; margin-top:7px; font-size:12px; color:#9db4ca; }
+  .metric { display:grid; grid-template-columns:1fr auto; gap:6px; font-size:12px; padding:8px 0; border-bottom:1px solid rgba(62,83,111,.35); }
+  .metric strong { color:#eaf7ff; font-size:13px; }
+  .tag { display:inline-flex; align-items:center; border-radius:6px; padding:3px 7px; background:#13243a; color:#b8d2ec; font-size:11px; border:1px solid #2c4968; }
+  .rightpad { padding:14px; font-size:12px; color:#a9bed2; }
+  .event { padding:10px; border:1px solid #31435a; border-radius:10px; margin-bottom:10px; background:#0b1725; }
+  .event .title { color:#f3fbff; font-weight:700; }
+  .event.orange { border-color:#725427; background:#1b1307; }
+  .event.red { border-color:#7b2d35; background:#1d080c; }
+  .event.green { border-color:#2f7054; background:#061b14; }
+  .bottom { display:grid; grid-template-columns:340px 1fr 360px; gap:14px; padding:0 14px 14px; }
+  .timeline { padding:12px 16px; }
+  .rail { height:10px; border-radius:20px; background:linear-gradient(90deg,#284c73,#5a2a7d,#b33d4a,#e1a03a); position:relative; margin-top:18px; }
+  .knob { width:18px; height:18px; border-radius:50%; background:#fff; position:absolute; top:-4px; box-shadow:0 0 18px #78c7ff; }
+  .legend { display:flex; gap:12px; flex-wrap:wrap; margin-top:12px; font-size:11px; color:#9cb2c8; }
+  .dot { width:9px; height:9px; border-radius:50%; display:inline-block; margin-right:5px; }
+  svg { width:100%; height:calc(100% - 42px); display:block; }
+  .callout { position:absolute; left:16px; bottom:14px; max-width:55%; border:1px solid #526d8e; background:rgba(6,12,20,.78); backdrop-filter:blur(10px); border-radius:10px; padding:10px 12px; color:#dbeaff; font-size:12px; line-height:1.35; }
+  .callout b { color:#fff; }
+  .mode25 { color:#ffda7a; }
+  .mode4d { color:#8cffc4; }
+  .watermark { position:absolute; right:16px; bottom:14px; color:rgba(190,210,230,.34); font-size:11px; letter-spacing:.08em; }
+</style>
+</head>
+<body>
+<div class="frame">
+  <div class="top">
+    <div class="brand">STORMDECK</div>
+    <div class="pill">CASE: KATD ARCHIVE / APPROVED V0 FEATURE SET</div>
+    <div class="pill live">REPLAY READY → REAL-TIME CONTRACT READY</div>
+    <div class="pill warn">OBSERVED DATA ≠ INFERRED FEATURES</div>
+    <div style="margin-left:auto" class="pill" id="titlePill">Render</div>
+  </div>
+  <div class="main">
+    <div class="panel">
+      <h2>CASE CONTROL <span class="sub">v0 replay cockpit</span></h2>
+      <div class="leftnav">
+        <div class="case"><b id="caseTitle">May 19 Supercell</b><div class="minirow"><span>Radar</span><b>KATD</b></div><div class="minirow"><span>Mode</span><b>Replay Bundle</b></div><div class="minirow"><span>Current Frame</span><b id="frameText">14 / 92</b></div></div>
+        <div class="case"><div class="metric"><span>Field</span><strong id="fieldText">Reflectivity / Velocity</strong></div><div class="metric"><span>Sweep</span><strong>0.8° / 1.6° / 2.4°</strong></div><div class="metric"><span>Scan age</span><strong id="ageText">+00:42</strong></div><div class="metric"><span>QC</span><strong>partial sector OK</strong></div></div>
+        <div class="case"><span class="tag">Native sector</span> <span class="tag">2.5D</span> <span class="tag">4D future</span><div class="minirow"><span>Export</span><b>PNG / MP4 / metadata</b></div><div class="minirow"><span>Geometry</span><b>native gates + masks</b></div></div>
+      </div>
+    </div>
+    <div class="panel">
+      <h2><span class="mode25">LEFT: 2.5D REVIEW VIEW</span> <span class="sub">near-term browser/static renderer</span></h2>
+      <svg id="leftSvg" viewBox="0 0 740 680" preserveAspectRatio="xMidYMid meet"></svg>
+      <div class="callout" id="leftCallout"></div>
+      <div class="watermark">2.5D: observed sweeps + vertical cue</div>
+    </div>
+    <div class="panel">
+      <h2><span class="mode4d">RIGHT: EVENTUAL 4D STORM WORLD</span> <span class="sub">future GPU realtime renderer</span></h2>
+      <svg id="rightSvg" viewBox="0 0 740 680" preserveAspectRatio="xMidYMid meet"></svg>
+      <div class="callout" id="rightCallout"></div>
+      <div class="watermark">4D: volumetric + temporal semantic scene</div>
+    </div>
+    <div class="panel">
+      <h2 id="rightTitle">WHAT CHANGED <span class="sub">last 60 sec</span></h2>
+      <div class="rightpad" id="events"></div>
+    </div>
+  </div>
+  <div class="bottom">
+    <div class="panel timeline"><b>DATA CONTRACT</b><div class="legend"><span><i class="dot" style="background:#46b4ff"></i>range/az/el buffers</span><span><i class="dot" style="background:#f8d84a"></i>observed mask</span><span><i class="dot" style="background:#ff5a70"></i>semantic object</span></div></div>
+    <div class="panel timeline"><b>TIMELINE SCRUBBER</b><div class="rail"><div class="knob" id="knob"></div></div><div class="legend"><span>22:14:02Z</span><span>22:15:02Z</span><span>22:16:02Z</span><span>22:17:02Z</span><span>22:18:02Z</span></div></div>
+    <div class="panel timeline"><b>OPERATOR EXPORT</b><div class="legend"><span>Screenshot</span><span>Short clip</span><span>JSON metadata sidecar</span><span>review notes</span></div></div>
+  </div>
+</div>
+<script>
+const palette = {bg:'#07101a', grid:'#21354c', cyan:'#46b4ff', green:'#58e399', yellow:'#ffd767', orange:'#ff9b45', red:'#ff5169', purple:'#b16eff', white:'#eaf6ff'};
+const scenarios = [
+ {title:'Render 1 / Main Storm Review Cockpit', case:'May 19 Supercell — Main Review', frame:'14 / 92', field:'REF + VEL compare', age:'+00:42', knob:'38%', right:'WHAT CHANGED', leftCall:'<b>2.5D:</b> stacked sweeps and vertical height cues. Fast, honest, reviewable on constrained hardware.', rightCall:'<b>4D:</b> continuous storm volume with time trails, object tracks, and spatially anchored annotations.', events:[['orange','Core intensified','+7 dBZ in 60 sec near forward flank'],['red','Velocity couplet tighter','gate-to-gate shear flagged for review'],['green','Provenance clear','observed gates shown; inferred object outlined']]} ,
+ {title:'Render 2 / Vertical Slice + Cross-Section', case:'May 19 Supercell — Slice Review', frame:'31 / 92', field:'Vertical REF slice', age:'+01:04', knob:'56%', right:'SLICE INSPECTOR', leftCall:'<b>2.5D:</b> user drags a slice line through native gates; height profile is a review overlay, not a full atmosphere.', rightCall:'<b>4D:</b> movable cross-sections cut through a time-scrubbable volumetric storm object.', events:[['orange','Updraft tower persists','high-reflectivity column visible across adjacent sweeps'],['green','Slice locked','A–B line exported with timestamp and sweep IDs'],['red','Uncertainty band','gap between sweeps labeled, not hidden']]} ,
+ {title:'Render 3 / Warning Corridor + Impact Context', case:'May 19 Supercell — Corridor View', frame:'49 / 92', field:'REF / ROT / Corridor', age:'+00:36', knob:'72%', right:'IMPACT CONTEXT', leftCall:'<b>2.5D:</b> storm footprint, range rings, towns, and warning corridor in a clean review map.', rightCall:'<b>4D:</b> projected storm motion and semantic hazard objects intersect terrain, roads, and response zones.', events:[['red','Corridor intersection','rotation object enters populated corridor in 9–14 min'],['orange','Motion vector changed','track shifted 8° right over last three frames'],['green','Export ready','public-safety frame includes caveats and source age']]} ,
+ {title:'Render 4 / Realtime Render-Ready Future Mode', case:'May 19 Supercell — GPU Handoff', frame:'72 / 92', field:'Engine buffers v0', age:'+00:18', knob:'86%', right:'REAL-TIME PATH', leftCall:'<b>2.5D:</b> static/replay reviewer reads the same bundle and confirms data quality before rendering glamor.', rightCall:'<b>4D:</b> GPU client streams buffers, renders volume bricks, object tracks, and time ghosts at 30–60 FPS.', events:[['green','Buffers loaded','REF.f16, VEL.f16, range/az/el.f32, observed mask'],['orange','GPU budget','3-frame history active; older frames decimated'],['red','Safety rule','AI/inferred object not drawn as observed radar truth']]} 
+];
+function el(tag, attrs={}, children=[]) { const n=document.createElementNS('http://www.w3.org/2000/svg', tag); for (const [k,v] of Object.entries(attrs)) n.setAttribute(k,v); for (const c of children) n.appendChild(c); return n; }
+function text(x,y,str,size=18,color=palette.white,anchor='start',weight='600') { const t=el('text',{x,y,fill:color,'font-size':size,'font-weight':weight,'text-anchor':anchor,'font-family':'Inter, system-ui'}); t.textContent=str; return t; }
+function blob(cx,cy,scale=1, rot=0) { let pts=[]; for(let i=0;i<42;i++){ let a=i/42*Math.PI*2; let r=(90+24*Math.sin(i*1.7)+15*Math.cos(i*2.9))*scale; pts.push([cx+Math.cos(a+rot)*r*1.45, cy+Math.sin(a+rot)*r*.82]); } return pts.map(p=>p.join(',')).join(' '); }
+function drawRadarBase(svg, view) { svg.innerHTML=''; svg.appendChild(el('rect',{x:0,y:0,width:740,height:680,fill:'#07101a'}));
+ for(let r=90;r<=360;r+=90){ svg.appendChild(el('path',{d:`M370 ${625-r} A${r} ${r} 0 0 1 ${370+r*.93} ${625-r*.37}`,fill:'none',stroke:palette.grid,'stroke-width':1.2})); }
+ for(let a=-55;a<=55;a+=22){ let rad=(a-90)*Math.PI/180; svg.appendChild(el('line',{x1:370,y1:625,x2:370+Math.cos(rad)*410,y2:625+Math.sin(rad)*410,stroke:palette.grid,'stroke-width':1})); }
+ svg.appendChild(el('circle',{cx:370,cy:625,r:5,fill:palette.cyan})); svg.appendChild(text(24,36,view,16,'#cfe7ff'));
+}
+function draw25(svg, scenarioIndex) { drawRadarBase(svg,'Native sector + 2.5D sweep stack');
+ const offsets = [[0,0,palette.green,.85],[-18,-45,palette.yellow,.72],[22,-82,palette.orange,.62],[-10,-122,palette.red,.55]];
+ offsets.forEach(([dx,dy,col,op],i)=>{ svg.appendChild(el('polygon',{points:blob(375+dx,385+dy,1-i*.06,.2*i),fill:col,opacity:op,stroke:'#fff','stroke-opacity':.12,'stroke-width':1})); });
+ svg.appendChild(el('path',{d:'M180 520 C280 450 402 426 558 360',stroke:'#ff5a70','stroke-width':5,fill:'none','stroke-dasharray':'10 9','stroke-linecap':'round'}));
+ svg.appendChild(text(560,356,'slice / track',13,'#ffd3d8'));
+ if(scenarioIndex===1){ svg.appendChild(el('line',{x1:150,y1:520,x2:600,y2:330,stroke:'#ffffff','stroke-width':4})); svg.appendChild(text(142,540,'A',24,'#fff')); svg.appendChild(text(610,326,'B',24,'#fff')); }
+ if(scenarioIndex===2){ svg.appendChild(el('polygon',{points:'260,468 430,372 610,430 454,552',fill:'none',stroke:'#ffd767','stroke-width':4,'stroke-dasharray':'12 8'})); svg.appendChild(text(510,452,'warning corridor',15,'#ffd767')); }
+ if(scenarioIndex===3){ ['REF.f16','VEL.f16','MASK.u8','R/A/E.f32'].forEach((s,i)=>{svg.appendChild(el('rect',{x:42+i*160,y:560,width:132,height:34,rx:7,fill:'#10243a',stroke:'#3b648b'})); svg.appendChild(text(108+i*160,582,s,13,'#cfe7ff','middle'));});}
+ svg.appendChild(el('rect',{x:42,y:72,width:156,height:52,rx:9,fill:'#0d1a29',stroke:'#395577'})); svg.appendChild(text(58,94,'OBSERVED GATES',13,'#e8f6ff')); svg.appendChild(text(58,114,'no hidden interpolation',11,'#8faac4'));
+}
+function draw4D(svg, scenarioIndex) { svg.innerHTML=''; svg.appendChild(el('rect',{x:0,y:0,width:740,height:680,fill:'#07101a'}));
+ for(let i=0;i<12;i++){ svg.appendChild(el('line',{x1:70+i*55,y1:590,x2:180+i*55,y2:430,stroke:palette.grid,'stroke-width':1})); svg.appendChild(el('line',{x1:70+i*55,y1:590,x2:520+i*8,y2:590,stroke:palette.grid,'stroke-width':1})); }
+ svg.appendChild(text(24,36,'Future 4D GPU storm scene',16,'#cfe7ff'));
+ const ghostCols=['#325f8c','#4779b7','#64a5db','#ffd767','#ff9b45','#ff5169'];
+ ghostCols.forEach((col,i)=>{ let x=270+i*34, y=405-i*22; svg.appendChild(el('polygon',{points:blob(x,y,1.18-i*.055,.4),fill:col,opacity:.22+i*.08,stroke:col,'stroke-width':1.4})); });
+ svg.appendChild(el('path',{d:'M220 510 C310 455 390 402 535 300',stroke:'#8cffc4','stroke-width':5,fill:'none','stroke-linecap':'round'}));
+ svg.appendChild(el('path',{d:'M216 532 C315 478 420 426 610 360',stroke:'#ff5a70','stroke-width':4,fill:'none','stroke-dasharray':'12 10'}));
+ svg.appendChild(el('circle',{cx:506,cy:318,r:48,fill:'none',stroke:'#ff5169','stroke-width':5})); svg.appendChild(text(506,322,'ROT',19,'#fff','middle','800'));
+ svg.appendChild(el('circle',{cx:430,cy:355,r:34,fill:'none',stroke:'#ffd767','stroke-width':4})); svg.appendChild(text(430,360,'HAIL?',15,'#ffd767','middle','800'));
+ if(scenarioIndex===1){ svg.appendChild(el('path',{d:'M130 530 L602 318',stroke:'#fff','stroke-width':4})); svg.appendChild(el('rect',{x:164,y:90,width:400,height:170,rx:10,fill:'rgba(12,26,42,.88)',stroke:'#48698d'})); svg.appendChild(text(184,122,'Live cross-section plane through storm volume',15,'#fff')); svg.appendChild(el('path',{d:'M205 220 C260 160 340 150 420 122 C460 112 510 132 535 178',stroke:'#ff9b45','stroke-width':12,fill:'none','opacity':.85})); }
+ if(scenarioIndex===2){ svg.appendChild(el('polygon',{points:'320,520 470,420 660,460 525,585',fill:'rgba(255,215,103,.12)',stroke:'#ffd767','stroke-width':4,'stroke-dasharray':'14 8'})); svg.appendChild(text(548,502,'impact corridor',16,'#ffd767')); ['Town A','School','Hwy 81'].forEach((s,i)=>{svg.appendChild(el('circle',{cx:445+i*58,cy:530-i*22,r:6,fill:'#fff'})); svg.appendChild(text(456+i*58,535-i*22,s,12,'#eaf6ff'));}); }
+ if(scenarioIndex===3){ for(let i=0;i<8;i++){ svg.appendChild(el('rect',{x:70+i*72,y:552,width:52,height:36,rx:6,fill:i<5?'#123453':'#211a10',stroke:i<5?'#46b4ff':'#ff9b45'})); } svg.appendChild(text(360,622,'time-history bricks + live buffer stream',14,'#aac7e3','middle')); }
+ svg.appendChild(el('rect',{x:42,y:72,width:170,height:54,rx:9,fill:'#071f18',stroke:'#2d8060'})); svg.appendChild(text(58,95,'SEMANTIC TRACKS',13,'#e8fff6')); svg.appendChild(text(58,115,'labeled as inferred',11,'#95d9be'));
+}
+function setEvents(list){ document.getElementById('events').innerHTML=list.map(([cls,t,b])=>`<div class="event ${cls}"><div class="title">${t}</div><div>${b}</div></div>`).join('') + '<div class="event"><div class="title">Operator caveat</div><div>All generated visuals preserve timestamps, data source, scan age, and confidence labels.</div></div>'; }
+const n = Math.max(1, Math.min(4, parseInt(new URLSearchParams(location.search).get('view')||'1')))-1; const s=scenarios[n];
+document.getElementById('titlePill').textContent=s.title; document.getElementById('caseTitle').textContent=s.case; document.getElementById('frameText').textContent=s.frame; document.getElementById('fieldText').textContent=s.field; document.getElementById('ageText').textContent=s.age; document.getElementById('rightTitle').innerHTML=s.right+' <span class="sub">approved feature set</span>'; document.getElementById('knob').style.left=s.knob; document.getElementById('leftCallout').innerHTML=s.leftCall; document.getElementById('rightCallout').innerHTML=s.rightCall; setEvents(s.events); draw25(document.getElementById('leftSvg'), n); draw4D(document.getElementById('rightSvg'), n);
+</script>
+</body>
+</html>
