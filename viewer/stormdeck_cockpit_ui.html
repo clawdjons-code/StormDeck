@@ -201,8 +201,8 @@
     }
     .cross { grid-column: 1; }
     .future { grid-column: 2; grid-row: 1 / span 2; }
-    .replay { display: grid; grid-template-rows: 46px minmax(0, 1fr) 56px; }
-    .replay .panel-head { grid-row: 1; }
+    .replay { display: grid; grid-template-rows: auto minmax(0, 1fr) 56px; }
+    .replay .panel-head { grid-row: 1; height: auto; min-height: 46px; padding-block: 5px; }
     .replay .canvas-wrap { position: relative; grid-row: 2; inset: auto; min-height: 0; }
     .replay .legend-card { top: 58px; }
     .replay .scan-badge { top: 58px; }
@@ -348,6 +348,15 @@
               <label for="sweepSelect">Sweep / elevation</label>
               <select id="sweepSelect"><option>0.5°</option><option>1.3°</option><option>2.4°</option></select>
             </div>
+            <div class="control-group">
+              <label for="sliceModeSelect">Slice</label>
+              <select id="sliceModeSelect" aria-label="A–B slice manipulation mode"><option>Free drag</option><option>Storm-relative</option><option>Motion-vector</option><option>Warning-corridor</option></select>
+            </div>
+            <div class="control-group">
+              <label for="sliceInterpSelect">Interpolation</label>
+              <select id="sliceInterpSelect" aria-label="A–B slice interpolation mode"><option>nearest gates</option><option>smoothed guide</option></select>
+            </div>
+            <div id="sliceStatus" class="time-chip" aria-live="polite">A–B: drag A/B handles · mode: observed + interpolated · no-data mask</div>
             <div class="time-chip">Scan Time · 20:11:24 Z</div>
             <div id="scanAgeBadge" class="time-chip" aria-label="Scan age indicator">Latest scan age · 18 sec</div>
             <button id="playReplayButton" aria-label="Play replay" type="button">▶</button>
@@ -497,17 +506,96 @@
       svg.appendChild(node('polygon', { points:'286,364 438,302 720,402 584,478', fill:'rgba(255,209,102,.075)', stroke:'rgba(255,209,102,.78)', 'stroke-width':3, 'stroke-dasharray':'14 10' }));
       svg.appendChild(text(615,430,'warning corridor',14,C.yellow,800));
     }
+    function sliceDistanceNm() {
+      const dx = sliceState.b.x - sliceState.a.x;
+      const dy = sliceState.b.y - sliceState.a.y;
+      return Math.max(1, Math.round(Math.hypot(dx, dy) / 8));
+    }
+    function updateSliceStatus() {
+      const mode = sliceModeSelect ? sliceModeSelect.value : 'Free drag';
+      const interp = sliceInterpSelect ? sliceInterpSelect.value : 'nearest gates';
+      const distance = sliceDistanceNm();
+      const label = `Selected A–B slice · ${distance} nm · ${mode}`;
+      selectedSliceLabel.textContent = label;
+      sliceStatus.textContent = `A–B: ${distance} nm · ${mode} · ${interp} · mode: observed + interpolated · no-data mask`;
+    }
+    function drawSliceControls(svg) {
+      const { a, b } = sliceState;
+      svg.appendChild(node('line',{x1:a.x,y1:a.y,x2:b.x,y2:b.y,stroke:'rgba(0,0,0,.82)','stroke-width':13, 'stroke-linecap':'round'}));
+      svg.appendChild(node('line',{x1:a.x,y1:a.y,x2:b.x,y2:b.y,stroke:'#ffffff','stroke-width':7, 'stroke-linecap':'round'}));
+      svg.appendChild(node('line',{id:'sliceLineActive',x1:a.x,y1:a.y,x2:b.x,y2:b.y,stroke:C.cyan,'stroke-width':2.8, 'stroke-linecap':'round','stroke-dasharray':'13 12'}));
+      const midX = (a.x + b.x) / 2;
+      const midY = (a.y + b.y) / 2;
+      svg.appendChild(text(midX - 92, midY - 20,'Selected A–B slice',18,'#ffffff',900));
+      const handleA = node('circle',{id:'sliceHandleA',cx:a.x,cy:a.y,r:16,fill:'#07101c',stroke:'#fff','stroke-width':3, tabindex:0, role:'slider', 'aria-label':'A slice handle'});
+      handleA.style.cursor = 'grab';
+      handleA.dataset.handle = 'a';
+      svg.appendChild(handleA);
+      svg.appendChild(text(a.x - 28, a.y + 26, 'A',31,'#fff',900));
+      const handleB = node('circle',{id:'sliceHandleB',cx:b.x,cy:b.y,r:16,fill:'#07101c',stroke:'#fff','stroke-width':3, tabindex:0, role:'slider', 'aria-label':'B slice handle'});
+      handleB.style.cursor = 'grab';
+      handleB.dataset.handle = 'b';
+      svg.appendChild(handleB);
+      svg.appendChild(text(b.x + 14, b.y + 4, 'B',31,'#fff',900));
+      updateSliceStatus();
+    }
+    function svgPointFromPointer(event) {
+      const svg = document.getElementById('replayMap');
+      const pt = svg.createSVGPoint();
+      pt.x = event.clientX;
+      pt.y = event.clientY;
+      return pt.matrixTransform(svg.getScreenCTM().inverse());
+    }
+    function clampSlicePoint(point) {
+      return { x: Math.min(830, Math.max(70, point.x)), y: Math.min(560, Math.max(80, point.y)) };
+    }
+    function updateSliceFromPointer(event) {
+      if (!activeSliceHandle) return;
+      const p = clampSlicePoint(svgPointFromPointer(event));
+      sliceState[activeSliceHandle] = p;
+      drawReplayMap();
+      drawCrossSection();
+    }
+    function setActiveSliceHandle(handle, event) {
+      if (sliceModeSelect.value !== 'Free drag') {
+        sliceStatus.textContent = `A–B locked to ${sliceModeSelect.value} · choose Free drag to manipulate handles`;
+        return;
+      }
+      activeSliceHandle = handle;
+      if (event.pointerId !== undefined) document.getElementById('replayMap').setPointerCapture(event.pointerId);
+      updateSliceFromPointer(event);
+    }
+    function applySliceModePreset() {
+      const mode = sliceModeSelect.value;
+      const presets = {
+        'Storm-relative': { a:{x:198,y:364}, b:{x:640,y:188} },
+        'Motion-vector': { a:{x:230,y:382}, b:{x:730,y:252} },
+        'Warning-corridor': { a:{x:286,y:364}, b:{x:720,y:402} },
+      };
+      if (presets[mode]) {
+        sliceState.a = presets[mode].a;
+        sliceState.b = presets[mode].b;
+      }
+      drawReplayMap();
+      drawCrossSection();
+    }
+    function attachSlicePointerHandlers() {
+      const svg = document.getElementById('replayMap');
+      svg.addEventListener('pointerdown', (event) => {
+        const handle = event.target && event.target.dataset ? event.target.dataset.handle : '';
+        if (handle === 'a' || handle === 'b') setActiveSliceHandle(handle, event);
+      });
+      svg.addEventListener('pointermove', updateSliceFromPointer);
+      svg.addEventListener('pointerup', (event) => {
+        activeSliceHandle = null;
+        if (event.pointerId !== undefined && svg.hasPointerCapture(event.pointerId)) svg.releasePointerCapture(event.pointerId);
+      });
+      svg.addEventListener('pointerleave', () => { activeSliceHandle = null; });
+    }
     function drawReplayMap() {
       const svg = document.getElementById('replayMap'); setViewBox(svg);
       svg.appendChild(node('path', { d:'M285 420 L86 126 A360 360 0 0 1 666 208 Z', fill:'rgba(102,217,255,.045)', stroke:'rgba(102,217,255,.16)', 'stroke-width':2 }));
-      drawMapLabels(svg); drawRangeRings(svg); drawWarningCorridor(svg); drawActiveField(svg);
-      svg.appendChild(node('line',{x1:132,y1:330,x2:650,y2:146,stroke:'rgba(0,0,0,.82)','stroke-width':13, 'stroke-linecap':'round'}));
-      svg.appendChild(node('line',{x1:132,y1:330,x2:650,y2:146,stroke:'#ffffff','stroke-width':7, 'stroke-linecap':'round'}));
-      svg.appendChild(node('line',{x1:132,y1:330,x2:650,y2:146,stroke:C.cyan,'stroke-width':2.8, 'stroke-linecap':'round','stroke-dasharray':'13 12'}));
-      svg.appendChild(text(420,196,'Selected A–B slice',18,'#ffffff',900));
-      svg.appendChild(node('circle',{cx:132,cy:330,r:14,fill:'#07101c',stroke:'#fff','stroke-width':3}));
-      svg.appendChild(node('circle',{cx:650,cy:146,r:14,fill:'#07101c',stroke:'#fff','stroke-width':3}));
-      svg.appendChild(text(104,356,'A',31,'#fff',900)); svg.appendChild(text(664,150,'B',31,'#fff',900));
+      drawMapLabels(svg); drawRangeRings(svg); drawWarningCorridor(svg); drawActiveField(svg); drawSliceControls(svg);
       svg.appendChild(node('circle',{cx:285,cy:420,r:16,fill:'none',stroke:'rgba(102,217,255,.46)','stroke-width':3}));
       svg.appendChild(node('circle',{cx:285,cy:420,r:8,fill:C.cyan,stroke:'#07101c','stroke-width':3}));
       svg.appendChild(text(52,78,'native radar sector/map',17,C.ink,850));
@@ -520,9 +608,15 @@
       svg.appendChild(node('line',{x1:70,y1:196,x2:840,y2:196,stroke:C.grid,'stroke-width':2})); svg.appendChild(node('line',{x1:70,y1:34,x2:70,y2:196,stroke:C.grid,'stroke-width':2}));
       svg.appendChild(text(30,42,'kft',12,C.muted,700)); svg.appendChild(text(807,222,'Distance nm',12,C.muted,700));
       svg.appendChild(text(52,203,'A',18,C.ink,900)); svg.appendChild(text(846,203,'B',18,C.ink,900));
-      const plumes = [[C.green,.60,260,152,165,44],[C.yellow,.75,285,144,116,34],[C.orange,.82,314,137,78,28],[C.red,.88,338,132,52,21],[C.mag,.80,360,128,29,14]];
+      const distance = sliceDistanceNm();
+      const shift = Math.max(-90, Math.min(140, (sliceState.a.x - 132) * 0.28));
+      const tilt = Math.max(-28, Math.min(28, (sliceState.b.y - sliceState.a.y) / 10));
+      const plumes = [[C.green,.60,260+shift,152+tilt,165,44],[C.yellow,.75,285+shift,144+tilt,116,34],[C.orange,.82,314+shift,137+tilt,78,28],[C.red,.88,338+shift,132+tilt,52,21],[C.mag,.80,360+shift,128+tilt,29,14]];
       plumes.forEach(([fill,op,cx,cy,sx,sy]) => svg.appendChild(node('path',{d:blob(cx,cy,sx,sy,Number(cx)/80),fill,opacity:op,stroke:'rgba(255,255,255,.12)'})));
-      svg.appendChild(node('path',{d:'M450 180 C520 154 604 148 742 168',stroke:C.green,'stroke-width':18,opacity:.48,fill:'none'}));
+      svg.appendChild(node('path',{d:`M450 ${180 + tilt/3} C520 ${154 + tilt/2} 604 148 742 168`,stroke:C.green,'stroke-width':18,opacity:.48,fill:'none'}));
+      svg.appendChild(node('path',{d:'M690 38 L840 38 L840 196 L690 196 Z',fill:'rgba(41,56,74,.50)',stroke:'rgba(152,191,234,.22)','stroke-dasharray':'6 7'}));
+      svg.appendChild(text(704,58,'no-data mask',12,C.muted,800));
+      svg.appendChild(text(96,24,`A–B ${distance} nm · ${sliceModeSelect.value} · ${sliceInterpSelect.value} · observed + interpolated`,13,'#d9ecff',800));
     }
     function drawFutureView() {
       const svg = document.getElementById('futureView'); setViewBox(svg);
@@ -610,6 +704,12 @@
     const resetLayoutButton = document.getElementById('resetLayoutButton');
     const fieldSelect = document.getElementById('fieldSelect');
     const sweepSelect = document.getElementById('sweepSelect');
+    const sliceModeSelect = document.getElementById('sliceModeSelect');
+    const sliceInterpSelect = document.getElementById('sliceInterpSelect');
+    const sliceStatus = document.getElementById('sliceStatus');
+    const selectedSliceLabel = document.getElementById('selectedSliceLabel');
+    const sliceState = { a:{x:132,y:330}, b:{x:650,y:146} };
+    let activeSliceHandle = null;
     const playReplayButton = document.getElementById('playReplayButton');
     const playbackStatus = document.getElementById('playbackStatus');
     const latestTimeLabel = document.getElementById('latestTimeLabel');
@@ -631,6 +731,8 @@
     bottomCardSlider.addEventListener('input', applyAdaptiveLayout);
     fieldSelect.addEventListener('change', applyFieldAndSweep);
     sweepSelect.addEventListener('change', applyFieldAndSweep);
+    sliceModeSelect.addEventListener('change', applySliceModePreset);
+    sliceInterpSelect.addEventListener('change', () => { updateSliceStatus(); drawCrossSection(); });
     playReplayButton.addEventListener('click', togglePlayback);
     screenshotButton.addEventListener('click', exportReplaySvg);
     videoButton.addEventListener('click', exportStoryboardJson);
@@ -642,6 +744,7 @@
     });
     applyAdaptiveLayout();
     drawReplayMap(); drawCrossSection(); drawFutureView();
+    attachSlicePointerHandlers();
   </script>
 </body>
 </html>

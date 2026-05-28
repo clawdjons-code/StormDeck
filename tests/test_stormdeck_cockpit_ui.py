@@ -214,3 +214,49 @@ def test_visible_controls_have_real_behavior_hooks():
         "Video storyboard JSON ready",
     ]:
         assert status_phrase in html
+
+
+def test_ab_slice_is_manipulatable_and_data_honest():
+    html = read_html()
+
+    for element_id in [
+        "sliceModeSelect",
+        "sliceInterpSelect",
+        "sliceStatus",
+    ]:
+        assert f'id="{element_id}"' in html
+
+    for dynamic_svg_id in [
+        "sliceHandleA",
+        "sliceHandleB",
+        "sliceLineActive",
+    ]:
+        assert dynamic_svg_id in html
+
+    for phrase in [
+        "Slice",
+        "Free drag",
+        "Storm-relative",
+        "Motion-vector",
+        "Warning-corridor",
+        "Interpolation",
+        "nearest gates",
+        "smoothed guide",
+        "mode: observed + interpolated",
+        "drag A/B handles",
+        "no-data mask",
+    ]:
+        assert phrase in html
+
+    for handler in [
+        "const sliceState",
+        "drawSliceControls",
+        "updateSliceFromPointer",
+        "setActiveSliceHandle",
+        "pointerdown",
+        "pointermove",
+        "pointerup",
+        "sliceModeSelect.addEventListener('change'",
+        "sliceInterpSelect.addEventListener('change'",
+    ]:
+        assert handler in html
