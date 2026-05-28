@@ -356,7 +356,7 @@
               <label for="sliceInterpSelect">Interpolation</label>
               <select id="sliceInterpSelect" aria-label="A–B slice interpolation mode"><option>nearest gates</option><option>smoothed guide</option></select>
             </div>
-            <div id="sliceStatus" class="time-chip" aria-live="polite">A–B: drag A/B handles · mode: observed + interpolated · no-data mask</div>
+            <div id="sliceStatus" class="time-chip" aria-live="polite">A–B: drag A/B handles · mode: observed gates + interpolated guide · no-data mask</div>
             <div class="time-chip">Scan Time · 20:11:24 Z</div>
             <div id="scanAgeBadge" class="time-chip" aria-label="Scan age indicator">Latest scan age · 18 sec</div>
             <button id="playReplayButton" aria-label="Play replay" type="button">▶</button>
@@ -517,7 +517,7 @@
       const distance = sliceDistanceNm();
       const label = `Selected A–B slice · ${distance} nm · ${mode}`;
       selectedSliceLabel.textContent = label;
-      sliceStatus.textContent = `A–B: ${distance} nm · ${mode} · ${interp} · mode: observed + interpolated · no-data mask`;
+      sliceStatus.textContent = `A–B: ${distance} nm · ${mode} · ${interp} · mode: observed gates + interpolated guide · no-data mask`;
     }
     function drawSliceControls(svg) {
       const { a, b } = sliceState;
@@ -616,7 +616,7 @@
       svg.appendChild(node('path',{d:`M450 ${180 + tilt/3} C520 ${154 + tilt/2} 604 148 742 168`,stroke:C.green,'stroke-width':18,opacity:.48,fill:'none'}));
       svg.appendChild(node('path',{d:'M690 38 L840 38 L840 196 L690 196 Z',fill:'rgba(41,56,74,.50)',stroke:'rgba(152,191,234,.22)','stroke-dasharray':'6 7'}));
       svg.appendChild(text(704,58,'no-data mask',12,C.muted,800));
-      svg.appendChild(text(96,24,`A–B ${distance} nm · ${sliceModeSelect.value} · ${sliceInterpSelect.value} · observed + interpolated`,13,'#d9ecff',800));
+      svg.appendChild(text(96,24,`A–B ${distance} nm · ${sliceModeSelect.value} · ${sliceInterpSelect.value} · observed gates + interpolated guide`,13,'#d9ecff',800));
     }
     function drawFutureView() {
       const svg = document.getElementById('futureView'); setViewBox(svg);

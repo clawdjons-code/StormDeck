@@ -242,7 +242,7 @@ def test_ab_slice_is_manipulatable_and_data_honest():
         "Interpolation",
         "nearest gates",
         "smoothed guide",
-        "mode: observed + interpolated",
+        "mode: observed gates + interpolated guide",
         "drag A/B handles",
         "no-data mask",
     ]:
