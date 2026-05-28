@@ -350,14 +350,14 @@
             </div>
             <div class="time-chip">Scan Time · 20:11:24 Z</div>
             <div id="scanAgeBadge" class="time-chip" aria-label="Scan age indicator">Latest scan age · 18 sec</div>
-            <button aria-label="Play replay">▶</button>
+            <button id="playReplayButton" aria-label="Play replay" type="button">▶</button>
           </div>
         </div>
         <div class="canvas-wrap"><svg id="replayMap" role="img" aria-label="2.5D replay map with A–B cross-section line"></svg></div>
         <div id="selectedSliceLabel" class="map-callout slice-label">Selected A–B slice</div>
         <div id="radarOriginLabel" class="map-callout origin-label">Radar origin</div>
         <div class="legend-card">
-          <h3>Reflectivity (dBZ)</h3>
+          <h3 id="legendTitle">Reflectivity (dBZ)</h3>
           <div class="legend-body">
             <div class="vbar"></div>
             <div class="legend-ticks"><span>75</span><span>60</span><span>45</span><span>30</span><span>15</span><span>0</span><span>-30</span></div>
@@ -369,10 +369,10 @@
         </div>
         <div id="timelineScrubber" class="timeline" aria-label="compact timeline">
           <div class="timeline-head">
-            <div class="small">◀ ◁ ▶ ▷ · playback 1×</div>
+            <div id="playbackStatus" class="small">Paused · playback 1×</div>
             <div id="latestTimeLabel" class="current-time">Current time · 20:11:24Z</div>
           </div>
-          <div class="rail"><div class="knob"></div></div>
+          <div class="rail"><div id="timelineKnob" class="knob"></div></div>
           <div class="ticks"><span>19:41</span><span>19:51</span><span>20:01</span><span>20:11</span><span>20:21</span><span>20:31</span></div>
         </div>
       </section>
@@ -419,7 +419,8 @@
       </section>
       <section id="exportPanel" class="strip">
         <h2>Export</h2>
-        <div class="export-actions"><button>Screenshot</button><button>Video</button></div>
+        <div class="export-actions"><button id="screenshotButton" type="button">Screenshot</button><button id="videoButton" type="button">Video</button></div>
+        <div id="exportStatus" class="small" aria-live="polite" style="margin-top:4px">Ready for export</div>
       </section>
     </div>
   </div>
@@ -482,6 +483,16 @@
       });
       for (let i=0;i<44;i++) svg.appendChild(node('circle',{cx:245+Math.sin(i*1.7)*180,cy:396+Math.cos(i*2.1)*96,r:1.4,fill:'rgba(90,190,255,.42)'}));
     }
+    function drawVelocityCore(svg) {
+      svg.appendChild(node('path', { d: blob(392, 292, 210, 62, 8), fill:C.green, opacity:.60, stroke:'rgba(255,255,255,.13)', 'stroke-width':1, transform:'rotate(-14 392 292)', filter:'url(#softGlow)' }));
+      svg.appendChild(node('path', { d: blob(498, 252, 178, 54, 10), fill:C.red, opacity:.66, stroke:'rgba(255,255,255,.13)', 'stroke-width':1, transform:'rotate(-14 498 252)', filter:'url(#softGlow)' }));
+      svg.appendChild(node('path', { d:'M236 350 C336 306 460 260 646 182', fill:'none', stroke:'rgba(255,255,255,.86)', 'stroke-width':5, 'stroke-linecap':'round', 'stroke-dasharray':'9 12' }));
+      svg.appendChild(text(548,276,'inbound / outbound',14,'#d9ecff',800));
+    }
+    function drawActiveField(svg) {
+      if (fieldSelect && fieldSelect.value === 'Velocity') drawVelocityCore(svg);
+      else drawReflectivityCore(svg);
+    }
     function drawWarningCorridor(svg) {
       svg.appendChild(node('polygon', { points:'286,364 438,302 720,402 584,478', fill:'rgba(255,209,102,.075)', stroke:'rgba(255,209,102,.78)', 'stroke-width':3, 'stroke-dasharray':'14 10' }));
       svg.appendChild(text(615,430,'warning corridor',14,C.yellow,800));
@@ -489,7 +500,7 @@
     function drawReplayMap() {
       const svg = document.getElementById('replayMap'); setViewBox(svg);
       svg.appendChild(node('path', { d:'M285 420 L86 126 A360 360 0 0 1 666 208 Z', fill:'rgba(102,217,255,.045)', stroke:'rgba(102,217,255,.16)', 'stroke-width':2 }));
-      drawMapLabels(svg); drawRangeRings(svg); drawWarningCorridor(svg); drawReflectivityCore(svg);
+      drawMapLabels(svg); drawRangeRings(svg); drawWarningCorridor(svg); drawActiveField(svg);
       svg.appendChild(node('line',{x1:132,y1:330,x2:650,y2:146,stroke:'rgba(0,0,0,.82)','stroke-width':13, 'stroke-linecap':'round'}));
       svg.appendChild(node('line',{x1:132,y1:330,x2:650,y2:146,stroke:'#ffffff','stroke-width':7, 'stroke-linecap':'round'}));
       svg.appendChild(node('line',{x1:132,y1:330,x2:650,y2:146,stroke:C.cyan,'stroke-width':2.8, 'stroke-linecap':'round','stroke-dasharray':'13 12'}));
@@ -538,16 +549,91 @@
       crossHeightValue.value = `${crossValue}`;
       bottomCardValue.value = `${bottomValue}`;
     }
+    function applyFieldAndSweep() {
+      const field = fieldSelect.value;
+      const sweep = sweepSelect.value;
+      legendTitle.textContent = field === 'Velocity' ? 'Velocity (kt)' : 'Reflectivity (dBZ)';
+      replayViewScope.textContent = `${field} · ${sweep} sweep · native radar sector/map · warning corridor`;
+      scanAgeBadge.textContent = `Latest scan age · ${sweep === '0.5°' ? '18' : sweep === '1.3°' ? '24' : '31'} sec`;
+      playbackStatus.textContent = `Paused · ${field} · ${sweep}`;
+      drawReplayMap();
+      drawCrossSection();
+    }
+    function advancePlaybackFrame() {
+      playbackFrame = (playbackFrame + 1) % replayTimes.length;
+      latestTimeLabel.textContent = `Current time · ${replayTimes[playbackFrame]}Z`;
+      timelineKnob.style.left = `${18 + playbackFrame * 16}%`;
+      playbackStatus.textContent = `Playing · frame ${playbackFrame + 1}/${replayTimes.length} · playback 1×`;
+    }
+    function togglePlayback() {
+      if (playbackTimer) {
+        clearInterval(playbackTimer);
+        playbackTimer = null;
+        playReplayButton.textContent = '▶';
+        playbackStatus.textContent = 'Paused · playback 1×';
+        return;
+      }
+      playReplayButton.textContent = 'Ⅱ';
+      advancePlaybackFrame();
+      playbackTimer = setInterval(advancePlaybackFrame, 1200);
+    }
+    function downloadBlob(filename, type, content) {
+      const blob = new Blob([content], { type });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 600);
+    }
+    function exportReplaySvg() {
+      const svgText = new XMLSerializer().serializeToString(document.getElementById('replayMap'));
+      downloadBlob('stormdeck-2-5d-replay.svg', 'image/svg+xml;charset=utf-8', svgText);
+      exportStatus.textContent = 'Screenshot SVG ready · observed replay map exported';
+    }
+    function exportStoryboardJson() {
+      const payload = {
+        product: 'StormDeck replay storyboard',
+        caveat: 'Storyboard export only; not encoded video and not forecast motion.',
+        field: fieldSelect.value,
+        sweep: sweepSelect.value,
+        frames: replayTimes.map((time, index) => ({ index, time_z: time, source: 'KATD archive case', mode: 'observed replay frame' }))
+      };
+      downloadBlob('stormdeck-replay-storyboard.json', 'application/json;charset=utf-8', JSON.stringify(payload, null, 2));
+      exportStatus.textContent = 'Video storyboard JSON ready · browser download started';
+    }
     const replayWidthSlider = document.getElementById('replayWidthSlider');
     const crossHeightSlider = document.getElementById('crossHeightSlider');
     const bottomCardSlider = document.getElementById('bottomCardSlider');
     const resetLayoutButton = document.getElementById('resetLayoutButton');
+    const fieldSelect = document.getElementById('fieldSelect');
+    const sweepSelect = document.getElementById('sweepSelect');
+    const playReplayButton = document.getElementById('playReplayButton');
+    const playbackStatus = document.getElementById('playbackStatus');
+    const latestTimeLabel = document.getElementById('latestTimeLabel');
+    const timelineKnob = document.getElementById('timelineKnob');
+    const replayViewScope = document.getElementById('replayViewScope');
+    const scanAgeBadge = document.getElementById('scanAgeBadge');
+    const legendTitle = document.getElementById('legendTitle');
+    const screenshotButton = document.getElementById('screenshotButton');
+    const videoButton = document.getElementById('videoButton');
+    const exportStatus = document.getElementById('exportStatus');
+    const replayTimes = ['19:51:24', '20:01:24', '20:11:24', '20:21:24', '20:31:24'];
+    let playbackFrame = 2;
+    let playbackTimer = null;
     const replayWidthValue = document.getElementById('replayWidthValue');
     const crossHeightValue = document.getElementById('crossHeightValue');
     const bottomCardValue = document.getElementById('bottomCardValue');
     replayWidthSlider.addEventListener('input', applyAdaptiveLayout);
     crossHeightSlider.addEventListener('input', applyAdaptiveLayout);
     bottomCardSlider.addEventListener('input', applyAdaptiveLayout);
+    fieldSelect.addEventListener('change', applyFieldAndSweep);
+    sweepSelect.addEventListener('change', applyFieldAndSweep);
+    playReplayButton.addEventListener('click', togglePlayback);
+    screenshotButton.addEventListener('click', exportReplaySvg);
+    videoButton.addEventListener('click', exportStoryboardJson);
     resetLayoutButton.addEventListener('click', () => {
       replayWidthSlider.value = 60;
       crossHeightSlider.value = 128;

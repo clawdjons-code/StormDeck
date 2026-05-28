@@ -180,3 +180,37 @@ def test_adaptive_sizing_controls_have_mobile_touch_layout():
         "main { grid-template-columns: minmax(0, 1fr)",
     ]:
         assert css_contract in html
+
+
+def test_visible_controls_have_real_behavior_hooks():
+    html = read_html()
+
+    for element_id in [
+        "playReplayButton",
+        "playbackStatus",
+        "legendTitle",
+        "screenshotButton",
+        "videoButton",
+        "exportStatus",
+    ]:
+        assert f'id="{element_id}"' in html
+
+    for handler in [
+        "applyFieldAndSweep",
+        "togglePlayback",
+        "exportReplaySvg",
+        "exportStoryboardJson",
+        "fieldSelect.addEventListener('change'",
+        "sweepSelect.addEventListener('change'",
+        "playReplayButton.addEventListener('click'",
+        "screenshotButton.addEventListener('click'",
+        "videoButton.addEventListener('click'",
+    ]:
+        assert handler in html
+
+    for status_phrase in [
+        "Paused · playback 1×",
+        "Screenshot SVG ready",
+        "Video storyboard JSON ready",
+    ]:
+        assert status_phrase in html
