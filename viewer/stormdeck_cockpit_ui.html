@@ -401,7 +401,7 @@
             <div class="mask-row"><span class="swatch" style="background:#81d4ff"></span><span>Observed gates</span></div>
             <div class="mask-row"><span class="swatch" style="background:repeating-linear-gradient(45deg,#ffd166 0 2px,#2b2110 2px 4px)"></span><span>Interpolated guide</span></div>
             <div class="mask-row"><span class="swatch" style="background:#29384a"></span><span>No data</span></div>
-            <div class="small" style="margin-top:8px">Provenance: sweep manifest · Transform status visible in export</div>
+            <div id="legendProvenance" class="small" style="margin-top:8px">Provenance: sweep manifest · Transform status visible in export</div>
           </div>
         </div>
         <div id="selectedSliceLabel" class="map-callout slice-label">Selected A–B slice</div>
@@ -412,7 +412,7 @@
             <div id="latestTimeLabel" class="current-time">Current time · 20:11:24Z</div>
           </div>
           <div class="rail"><div id="timelineKnob" class="knob"></div></div>
-          <div class="ticks"><span>19:41</span><span>19:51</span><span>20:01</span><span>20:11</span><span>20:21</span><span>20:31</span></div>
+          <div id="timelineTicks" class="ticks"><span>19:41</span><span>19:51</span><span>20:01</span><span>20:11</span><span>20:21</span><span>20:31</span></div>
         </div>
       </section>
 
@@ -466,6 +466,14 @@
 
   <script>
     const NS = 'http://www.w3.org/2000/svg';
+    const fieldVocabulary = {
+      REF: { label: 'Reflectivity', units: 'dBZ', kind: 'reflectivity', legend: 'Reflectivity (dBZ)', scaleClass: 'reflectivityScale' },
+      VEL: { label: 'Velocity', units: 'm/s', kind: 'velocity', legend: 'Velocity (m/s)', scaleClass: 'velocityScale' },
+      SW: { label: 'Spectrum width', units: 'm/s', kind: 'spectrum_width', legend: 'Spectrum width (m/s)', scaleClass: 'spectrumWidthScale' },
+    };
+    const fieldAliases = { REFLECTIVITY: 'REF', 'REFLECTIVITY DBZ': 'REF', DBZ: 'REF', VELOCITY: 'VEL', VEL: 'VEL', SW: 'SW', WIDTH: 'SW', 'SPECTRUM WIDTH': 'SW' };
+    function canonicalField(value) { return fieldAliases[String(value || '').trim().toUpperCase()] || String(value || 'REF').trim().toUpperCase(); }
+    function fieldInfo(value) { const key = canonicalField(value); return { key, ...(fieldVocabulary[key] || { label: key || 'Field', units: 'unknown', kind: 'unknown', legend: `${key || 'Field'} (unknown)`, scaleClass: 'unknownScale' }) }; }
     const C = { grid:'#28445f', ink:'#edf7ff', muted:'#8ea9c4', cyan:'#66d9ff', green:'#54d68b', yellow:'#ffd166', orange:'#ff9f43', red:'#ff586b', mag:'#d76dff' };
     function node(tag, attrs = {}) { const n = document.createElementNS(NS, tag); for (const [k,v] of Object.entries(attrs)) n.setAttribute(k, v); return n; }
     function text(x, y, value, size = 14, fill = C.ink, weight = 650) { const t = node('text', { x, y, fill, 'font-size': size, 'font-weight': weight, 'font-family': 'Inter, system-ui, sans-serif' }); t.textContent = value; return t; }
@@ -522,14 +530,31 @@
       });
       for (let i=0;i<44;i++) svg.appendChild(node('circle',{cx:245+Math.sin(i*1.7)*180,cy:396+Math.cos(i*2.1)*96,r:1.4,fill:'rgba(90,190,255,.42)'}));
     }
+    function renderObservedQuicklookFrame(svg, frame) {
+      if (!frame || !frame.quicklook_exists || !frame.quicklook_path) return false;
+      const href = joinPath(cockpitState.bundleRoot || '.', frame.quicklook_path);
+      svg.appendChild(node('image', { href, x:72, y:116, width:720, height:410, preserveAspectRatio:'xMidYMid meet', opacity:.92 }));
+      svg.appendChild(text(52,78,'observed_native_quicklook_png displayed',15,C.ink,850));
+      svg.appendChild(text(52,102,'2.5D browse from manifest quicklook_path · not gridded 3D volume retrieval',13,'#aec2d5',650));
+      return true;
+    }
     function drawVelocityCore(svg) {
       svg.appendChild(node('path', { d: blob(392, 292, 210, 62, 8), fill:C.green, opacity:.60, stroke:'rgba(255,255,255,.13)', 'stroke-width':1, transform:'rotate(-14 392 292)', filter:'url(#softGlow)' }));
       svg.appendChild(node('path', { d: blob(498, 252, 178, 54, 10), fill:C.red, opacity:.66, stroke:'rgba(255,255,255,.13)', 'stroke-width':1, transform:'rotate(-14 498 252)', filter:'url(#softGlow)' }));
       svg.appendChild(node('path', { d:'M236 350 C336 306 460 260 646 182', fill:'none', stroke:'rgba(255,255,255,.86)', 'stroke-width':5, 'stroke-linecap':'round', 'stroke-dasharray':'9 12' }));
       svg.appendChild(text(520,276,'radial velocity sign pair · not detection',13,'#d9ecff',800));
     }
+    function drawSpectrumWidthCore(svg) {
+      svg.appendChild(node('path', { d: blob(420, 288, 225, 64, 12), fill:C.cyan, opacity:.56, stroke:'rgba(255,255,255,.13)', 'stroke-width':1, transform:'rotate(-14 420 288)', filter:'url(#softGlow)' }));
+      svg.appendChild(node('path', { d: blob(470, 260, 112, 34, 13), fill:C.yellow, opacity:.66, stroke:'rgba(255,255,255,.13)', 'stroke-width':1, transform:'rotate(-14 470 260)', filter:'url(#softGlow)' }));
+      svg.appendChild(text(494,292,'spectrum width · turbulent spread guide',13,'#d9ecff',800));
+    }
     function drawActiveField(svg) {
-      if (fieldSelect && fieldSelect.value.toLowerCase().includes('velocity')) drawVelocityCore(svg);
+      const frame = currentFrame();
+      if (renderObservedQuicklookFrame(svg, frame)) return;
+      const info = fieldInfo(fieldSelect && fieldSelect.value);
+      if (info.kind === 'velocity') drawVelocityCore(svg);
+      else if (info.kind === 'spectrum_width') drawSpectrumWidthCore(svg);
       else drawReflectivityCore(svg);
     }
     function drawWarningCorridor(svg) {
@@ -723,11 +748,14 @@
       const field = fieldSelect.value;
       const sweep = sweepSelect.value;
       const frame = currentFrame();
-      const units = frame && frame.units ? frame.units : (field.toLowerCase().includes('velocity') ? 'm/s' : 'dBZ');
-      const velocityActive = field.toLowerCase().includes('velocity');
-      legendTitle.textContent = velocityActive ? 'Velocity (m/s)' : 'Reflectivity (dBZ)';
-      document.querySelector('.legend-dock').classList.toggle('velocityScale', velocityActive);
-      replayViewScope.textContent = `${field} · ${sweep} sweep · ${units} · observed native sector/map · warning corridor`;
+      const info = fieldInfo(field);
+      const realQuicklook = Boolean(frame && frame.quicklook_exists && frame.quicklook_path);
+      legendTitle.textContent = info.legend;
+      const legend = document.querySelector('.legend-dock');
+      legend.classList.toggle('velocityScale', info.kind === 'velocity');
+      legend.classList.toggle('spectrumWidthScale', info.kind === 'spectrum_width');
+      legendProvenance.textContent = realQuicklook ? 'Provenance: observed_native_quicklook_png displayed · Transform status visible in export' : 'Provenance: mock_visual_guide_not_real_data · Transform status visible in export';
+      replayViewScope.textContent = `${info.label} · ${sweep} sweep · ${info.units} · ${realQuicklook ? 'observed quicklook browse' : 'mock visual guide'} · warning corridor`;
       scanAgeBadge.textContent = frame ? `Replay frame · scan age not live · ${frame.interpretation_limit || 'sample browse only — not time-continuous storm motion'}` : `Latest scan age unavailable · mock visual guide`;
       playbackStatus.textContent = `Paused · ${field} · ${sweep}`;
       updateProvenancePanel();
@@ -753,7 +781,7 @@
       timelineKnob.style.left = `${18 + (count > 1 ? playbackFrame * (64 / (count - 1)) : 0)}%`;
       playbackStatus.textContent = `Playing · frame ${playbackFrame + 1}/${count} · playback 1× · sample browse only — not time-continuous storm motion`;
       if (frame) {
-        fieldSelect.value = frame.field || fieldSelect.value;
+        fieldSelect.value = frame.field ? canonicalField(frame.field) : fieldSelect.value;
         sweepSelect.value = frame.sweep_name || frame.fixed_angle_display || sweepSelect.value;
       }
       updateProvenancePanel();
@@ -784,9 +812,9 @@
     function cockpitExportMetadata() {
       const frame = currentFrame();
       return {
-        radar_id: (cockpitState.engineManifest && (cockpitState.engineManifest.radar_id || cockpitState.engineManifest.site || cockpitState.engineManifest.case_id)) || 'KATD',
+        radar_id: (cockpitState.engineManifest && (cockpitState.engineManifest.radar_id || cockpitState.engineManifest.site || cockpitState.engineManifest.instrument_name)) || 'KATD',
         field: fieldSelect.value,
-        units: fieldSelect.value.toLowerCase().includes('velocity') ? 'm/s' : 'dBZ',
+        units: fieldInfo(fieldSelect.value).units,
         sweep: sweepSelect.value,
         time: frame ? (frame.volume_start_time || frame.time_z || null) : latestTimeLabel.textContent.replace('Current time · ', ''),
         source: frame ? (frame.quicklook_path || frame.provenance || 'stormdeck_bundle_manifest.json') : 'mock visual guide',
@@ -835,14 +863,14 @@
       select.replaceChildren(...values.map(value => {
         const option = document.createElement('option');
         option.value = value;
-        option.textContent = value;
+        option.textContent = fieldVocabulary[value] ? `${fieldVocabulary[value].label} (${value})` : value;
         return option;
       }));
       if (values.includes(previous)) select.value = previous;
     }
     function populateFieldAndSweepSelectorsFromManifest(manifest) {
       const frames = Array.isArray(manifest.frames) ? manifest.frames : [];
-      const fields = Array.from(new Set([...(manifest.fields || []), ...frames.map(frame => frame.field).filter(Boolean)]));
+      const fields = Array.from(new Set([...(manifest.fields || []), ...frames.map(frame => frame.field).filter(Boolean)])).map(canonicalField);
       const sweeps = Array.from(new Set(frames.map(frame => frame.sweep_name || frame.fixed_angle_display).filter(Boolean)));
       if (fields.length) setOptions(fieldSelect, fields);
       if (sweeps.length) setOptions(sweepSelect, sweeps);
@@ -859,14 +887,31 @@
         return li;
       }));
     }
+
+    function formatTickTime(value) {
+      const raw = String(value || '');
+      const match = raw.match(/([0-9]{2}):([0-9]{2})(?::[0-9]{2})?/);
+      return match ? `${match[1]}:${match[2]}` : raw.slice(0, 5) || '—';
+    }
+    function renderTimelineTicksFromFrames(frames) {
+      const times = Array.from(new Set((frames || []).map(frame => frame.volume_start_time || frame.time_z || frame.start_time).filter(Boolean)));
+      const sample = times.length > 6 ? [times[0], times[Math.floor(times.length*.2)], times[Math.floor(times.length*.4)], times[Math.floor(times.length*.6)], times[Math.floor(times.length*.8)], times[times.length-1]] : times;
+      const labels = sample.length ? sample.map(formatTickTime) : ['19:41','19:51','20:01','20:11','20:21','20:31'];
+      timelineTicks.replaceChildren(...labels.map(label => {
+        const span = document.createElement('span');
+        span.textContent = label;
+        return span;
+      }));
+    }
     function updateProvenancePanel() {
       const frame = currentFrame();
       const manifest = cockpitState.engineManifest;
       qcRadarId.textContent = (manifest && (manifest.radar_id || manifest.site || manifest.case_id)) || 'KATD';
       qcScanTime.textContent = frame ? (frame.volume_start_time || frameTimeLabel(frame)) : '20:11:24Z';
-      qcTransformStatus.textContent = frame ? (frame.provenance || 'observed_native_quicklook_png') : 'Transform status';
-      qcStatus.textContent = cockpitState.validation ? (cockpitState.validation.status || 'validated bundle') : 'QC pending';
-      manifestStatus.textContent = manifest ? `Manifest: ${manifest.schema || 'stormdeck_bundle_manifest.json'} · ${manifest.frame_count || (manifest.frames || []).length || 0} frames · field_value_deltas_included: false` : 'Manifest: mock visual guide · field_value_deltas_included: false';
+      const realQuicklook = Boolean(frame && frame.quicklook_exists && frame.quicklook_path);
+      qcTransformStatus.textContent = realQuicklook ? 'observed_native_quicklook_png displayed' : 'mock_visual_guide_not_real_data';
+      qcStatus.textContent = 'QC pending';
+      manifestStatus.textContent = manifest ? `Manifest: ${manifest.schema || 'stormdeck_bundle_manifest.json'} · ${manifest.frame_count || (manifest.frames || []).length || 0} frames · quicklook validation is not QC · field_value_deltas_included: false` : 'Manifest: mock visual guide · field_value_deltas_included: false';
       renderWhatChangedUnavailable();
     }
     function applyManifestToCockpit(manifest) {
@@ -876,10 +921,11 @@
       populateFieldAndSweepSelectorsFromManifest(manifest);
       const frame = currentFrame();
       if (frame) {
-        if (frame.field) fieldSelect.value = frame.field;
+        if (frame.field) fieldSelect.value = canonicalField(frame.field);
         if (frame.sweep_name || frame.fixed_angle_display) sweepSelect.value = frame.sweep_name || frame.fixed_angle_display;
         latestTimeLabel.textContent = `Current time · ${frameTimeLabel(frame)}Z`;
       }
+      renderTimelineTicksFromFrames(manifest.frames || []);
       replayViewScope.textContent = `${manifest.case_id || 'KATD bundle'} · stormdeck_bundle_manifest.json · sample browse only — not time-continuous storm motion`;
       updateProvenancePanel();
       applyFieldAndSweep();
@@ -917,9 +963,11 @@
     const playbackStatus = document.getElementById('playbackStatus');
     const latestTimeLabel = document.getElementById('latestTimeLabel');
     const timelineKnob = document.getElementById('timelineKnob');
+    const timelineTicks = document.getElementById('timelineTicks');
     const replayViewScope = document.getElementById('replayViewScope');
     const scanAgeBadge = document.getElementById('scanAgeBadge');
     const legendTitle = document.getElementById('legendTitle');
+    const legendProvenance = document.getElementById('legendProvenance');
     const screenshotButton = document.getElementById('screenshotButton');
     const videoButton = document.getElementById('videoButton');
     const exportStatus = document.getElementById('exportStatus');

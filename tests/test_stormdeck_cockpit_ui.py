@@ -269,6 +269,35 @@ def test_cockpit_is_manifest_ready_and_data_honest_before_real_data():
     assert "linear-gradient(180deg, #3b60ff" in html or "linear-gradient(90deg, #3b60ff" in html
 
 
+def test_cockpit_real_manifest_contract_handles_ref_vel_sw_quicklooks_and_qc_honestly():
+    html = read_html()
+
+    for contract in [
+        "const fieldVocabulary",
+        "REF: { label: 'Reflectivity', units: 'dBZ'",
+        "VEL: { label: 'Velocity', units: 'm/s'",
+        "SW: { label: 'Spectrum width', units: 'm/s'",
+        "fieldInfo(",
+        "renderObservedQuicklookFrame",
+        "quicklook_exists",
+        "quicklook_path",
+        "observed_native_quicklook_png displayed",
+        "mock_visual_guide_not_real_data",
+        "QC pending",
+        "missing/flag counts required",
+        "renderTimelineTicksFromFrames",
+        "volume_start_time",
+    ]:
+        assert contract in html
+
+    for forbidden in [
+        "includes('velocity')",
+        'units: fieldSelect.value.toLowerCase().includes',
+        "validation.status || 'validated bundle'",
+    ]:
+        assert forbidden not in html
+
+
 def test_visible_controls_have_real_behavior_hooks():
     html = read_html()
 
