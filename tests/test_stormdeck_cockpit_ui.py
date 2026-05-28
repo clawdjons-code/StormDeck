@@ -269,3 +269,27 @@ def test_ab_slice_is_manipulatable_and_data_honest():
         "sliceInterpSelect.addEventListener('change'",
     ]:
         assert handler in html
+
+
+def test_ab_slice_handles_have_large_user_hit_targets_and_keyboard_fallback():
+    html = read_html()
+
+    for hit_target_id in [
+        "sliceHandleAHitTarget",
+        "sliceHandleBHitTarget",
+    ]:
+        assert hit_target_id in html
+
+    for contract in [
+        "r:34",
+        "fill:'transparent'",
+        "pointer-events':'all'",
+        "touchAction = 'none'",
+        "userSelect = 'none'",
+        "bindSliceHandleTarget",
+        "handleSliceKeyboardNudge",
+        "keydown",
+        "Dragging A handle",
+        "Dragging B handle",
+    ]:
+        assert contract in html

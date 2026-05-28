@@ -530,14 +530,16 @@
       const midX = (a.x + b.x) / 2;
       const midY = (a.y + b.y) / 2;
       svg.appendChild(text(midX - 92, midY - 20,'Selected A–B slice',18,'#ffffff',900));
-      const handleA = node('circle',{id:'sliceHandleA',cx:a.x,cy:a.y,r:16,fill:'#07101c',stroke:'#fff','stroke-width':3, tabindex:0, role:'slider', 'aria-label':'A slice handle'});
-      handleA.style.cursor = 'grab';
-      handleA.dataset.handle = 'a';
+      const handleAHit = node('circle',{id:'sliceHandleAHitTarget',cx:a.x,cy:a.y,r:34,fill:'transparent',stroke:'transparent','stroke-width':1,'pointer-events':'all', tabindex:0, role:'slider', 'aria-label':'A slice handle drag target', 'aria-valuetext':`A ${Math.round(a.x)},${Math.round(a.y)}`});
+      const handleA = node('circle',{id:'sliceHandleA',cx:a.x,cy:a.y,r:17,fill:'#07101c',stroke:'#fff','stroke-width':3,'pointer-events':'none'});
+      bindSliceHandleTarget(handleAHit, 'a');
+      svg.appendChild(handleAHit);
       svg.appendChild(handleA);
       svg.appendChild(text(a.x - 28, a.y + 26, 'A',31,'#fff',900));
-      const handleB = node('circle',{id:'sliceHandleB',cx:b.x,cy:b.y,r:16,fill:'#07101c',stroke:'#fff','stroke-width':3, tabindex:0, role:'slider', 'aria-label':'B slice handle'});
-      handleB.style.cursor = 'grab';
-      handleB.dataset.handle = 'b';
+      const handleBHit = node('circle',{id:'sliceHandleBHitTarget',cx:b.x,cy:b.y,r:34,fill:'transparent',stroke:'transparent','stroke-width':1,'pointer-events':'all', tabindex:0, role:'slider', 'aria-label':'B slice handle drag target', 'aria-valuetext':`B ${Math.round(b.x)},${Math.round(b.y)}`});
+      const handleB = node('circle',{id:'sliceHandleB',cx:b.x,cy:b.y,r:17,fill:'#07101c',stroke:'#fff','stroke-width':3,'pointer-events':'none'});
+      bindSliceHandleTarget(handleBHit, 'b');
+      svg.appendChild(handleBHit);
       svg.appendChild(handleB);
       svg.appendChild(text(b.x + 14, b.y + 4, 'B',31,'#fff',900));
       updateSliceStatus();
@@ -552,6 +554,32 @@
     function clampSlicePoint(point) {
       return { x: Math.min(830, Math.max(70, point.x)), y: Math.min(560, Math.max(80, point.y)) };
     }
+    function bindSliceHandleTarget(target, handle) {
+      target.dataset.handle = handle;
+      target.style.cursor = 'grab';
+      target.style.touchAction = 'none';
+      target.style.userSelect = 'none';
+      target.addEventListener('pointerdown', (event) => setActiveSliceHandle(handle, event));
+      target.addEventListener('keydown', (event) => handleSliceKeyboardNudge(handle, event));
+    }
+    function nudgeSliceHandle(handle, dx, dy) {
+      sliceState[handle] = clampSlicePoint({ x: sliceState[handle].x + dx, y: sliceState[handle].y + dy });
+      drawReplayMap();
+      drawCrossSection();
+    }
+    function handleSliceKeyboardNudge(handle, event) {
+      if (!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key)) return;
+      if (sliceModeSelect.value !== 'Free drag') {
+        sliceStatus.textContent = `A–B locked to ${sliceModeSelect.value} · choose Free drag to manipulate handles`;
+        return;
+      }
+      event.preventDefault();
+      const step = event.shiftKey ? 24 : 8;
+      if (event.key === 'ArrowLeft') nudgeSliceHandle(handle, -step, 0);
+      if (event.key === 'ArrowRight') nudgeSliceHandle(handle, step, 0);
+      if (event.key === 'ArrowUp') nudgeSliceHandle(handle, 0, -step);
+      if (event.key === 'ArrowDown') nudgeSliceHandle(handle, 0, step);
+    }
     function updateSliceFromPointer(event) {
       if (!activeSliceHandle) return;
       const p = clampSlicePoint(svgPointFromPointer(event));
@@ -565,7 +593,12 @@
         return;
       }
       activeSliceHandle = handle;
-      if (event.pointerId !== undefined) document.getElementById('replayMap').setPointerCapture(event.pointerId);
+      const svg = document.getElementById('replayMap');
+      if (event.currentTarget) event.currentTarget.style.cursor = 'grabbing';
+      const dragLabel = handle === 'a' ? 'Dragging A handle' : 'Dragging B handle';
+      sliceStatus.textContent = `${dragLabel} · release to set A–B slice`;
+      event.preventDefault();
+      if (event.pointerId !== undefined && svg.setPointerCapture) svg.setPointerCapture(event.pointerId);
       updateSliceFromPointer(event);
     }
     function applySliceModePreset() {
@@ -584,6 +617,8 @@
     }
     function attachSlicePointerHandlers() {
       const svg = document.getElementById('replayMap');
+      svg.style.touchAction = 'none';
+      svg.style.userSelect = 'none';
       svg.addEventListener('pointerdown', (event) => {
         const handle = event.target && event.target.dataset ? event.target.dataset.handle : '';
         if (handle === 'a' || handle === 'b') setActiveSliceHandle(handle, event);
@@ -591,7 +626,13 @@
       svg.addEventListener('pointermove', updateSliceFromPointer);
       svg.addEventListener('pointerup', (event) => {
         activeSliceHandle = null;
-        if (event.pointerId !== undefined && svg.hasPointerCapture(event.pointerId)) svg.releasePointerCapture(event.pointerId);
+        updateSliceStatus();
+        if (event.pointerId !== undefined && svg.hasPointerCapture && svg.hasPointerCapture(event.pointerId)) svg.releasePointerCapture(event.pointerId);
+      });
+      svg.addEventListener('pointercancel', (event) => {
+        activeSliceHandle = null;
+        updateSliceStatus();
+        if (event.pointerId !== undefined && svg.hasPointerCapture && svg.hasPointerCapture(event.pointerId)) svg.releasePointerCapture(event.pointerId);
       });
       svg.addEventListener('pointerleave', () => { activeSliceHandle = null; });
     }
