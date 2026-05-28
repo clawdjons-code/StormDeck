@@ -191,6 +191,32 @@ def test_adaptive_sizing_controls_have_mobile_touch_layout():
         assert css_contract in html
 
 
+def test_reflectivity_legend_is_docked_not_overlaying_2_5d_view():
+    html = read_html()
+
+    assert 'class="replay-workspace"' in html
+    assert 'class="legend-card legend-dock"' in html
+    assert 'grid-template-columns: minmax(0, 1fr) 120px' in html
+    assert 'grid-template-columns: 1fr' in html
+    assert 'grid-row: 2' in html
+    assert 'grid-column: 2' in html
+    assert 'grid-column: 1' in html
+
+    legend_block = re.search(r"\.legend-card \{(?P<body>.*?)\n    \}", html, re.S)
+    assert legend_block is not None
+    assert "position: absolute" not in legend_block.group("body")
+
+    mobile_legend_rules = [
+        line.strip()
+        for line in html.splitlines()
+        if line.strip().startswith(".legend-dock")
+    ]
+    assert mobile_legend_rules
+    for rule in mobile_legend_rules:
+        assert "position: absolute" not in rule
+        assert "transform:" not in rule
+
+
 def test_visible_controls_have_real_behavior_hooks():
     html = read_html()
 

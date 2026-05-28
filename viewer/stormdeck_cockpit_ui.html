@@ -135,15 +135,14 @@
     .canvas-wrap { position: absolute; inset: 46px 0 0; }
     svg { width: 100%; height: 100%; display: block; }
     .legend-card {
-      position: absolute;
-      right: 10px;
-      top: 74px;
-      width: 104px;
+      width: 100%;
+      max-width: 120px;
+      align-self: start;
       border: 1px solid rgba(75, 112, 150, 0.62);
       border-radius: 8px;
-      padding: 9px;
-      background: rgba(3, 8, 16, 0.92);
-      backdrop-filter: blur(8px);
+      padding: 8px;
+      background: rgba(3, 8, 16, 0.96);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.02);
     }
     .legend-card h3 { margin: 0 0 7px; font-size: 10px; color: #d9ecff; text-transform: uppercase; letter-spacing: 0.05em; }
     .legend-body { display: grid; grid-template-columns: 20px 1fr; gap: 8px; align-items: stretch; }
@@ -206,8 +205,17 @@
     .future { grid-column: 2; grid-row: 1 / span 2; }
     .replay { display: grid; grid-template-rows: auto minmax(0, 1fr) 56px; }
     .replay .panel-head { grid-row: 1; height: auto; min-height: 46px; padding-block: 5px; }
-    .replay .canvas-wrap { position: relative; grid-row: 2; inset: auto; min-height: 0; }
-    .replay .legend-card { top: 58px; }
+    .replay-workspace {
+      grid-row: 2;
+      min-height: 0;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 120px;
+      gap: 8px;
+      padding: 0 10px 0 0;
+      overflow: hidden;
+    }
+    .replay .canvas-wrap { position: relative; grid-column: 1; inset: auto; min-height: 0; }
+    .legend-dock { grid-column: 2; justify-self: stretch; margin-top: 8px; }
     .replay .scan-badge { top: 58px; }
     .replay .scope-card { top: 100px; }
     .bottom { display: grid; grid-template-columns: 1.2fr 1fr 220px; gap: 8px; padding: 0 8px 8px; }
@@ -298,7 +306,13 @@
       .replay .panel-head { height: auto; min-height: 76px; align-items: flex-start; padding: 7px 8px; }
       .replay { grid-template-rows: auto minmax(0, 1fr) 56px; }
       .control-row { justify-content: flex-start; }
-      .legend-card { right: 6px; width: 96px; transform: scale(.9); transform-origin: top right; }
+      .replay-workspace { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr) auto; padding: 0 8px; gap: 6px; }
+      .replay .canvas-wrap { grid-column: 1; grid-row: 1; }
+      .legend-dock { grid-column: 1; grid-row: 2; max-width: none; margin-top: 0; }
+      .legend-dock .legend-body { grid-template-columns: 1fr; }
+      .legend-dock .vbar { width: 100%; min-height: 10px; height: 10px; background: linear-gradient(90deg, #2b72ff, #35c6ff, #34c97b, #f5e642, #ff9f43, #ff3b4f, #d76dff); }
+      .legend-dock .legend-ticks { flex-direction: row; font-size: 9px; }
+      .legend-dock .mask-row { display: inline-grid; margin-right: 8px; margin-top: 5px; }
       .slice-label { left: 18px; top: 204px; }
       .origin-label { left: 18px; bottom: 70px; }
       .bottom { grid-template-columns: 1fr; grid-auto-rows: var(--mobile-bottom-card-row); }
@@ -365,20 +379,22 @@
             <button id="playReplayButton" aria-label="Play replay" type="button">▶</button>
           </div>
         </div>
-        <div class="canvas-wrap"><svg id="replayMap" role="img" aria-label="2.5D replay map with A–B cross-section line"></svg></div>
+        <div class="replay-workspace">
+          <div class="canvas-wrap"><svg id="replayMap" role="img" aria-label="2.5D replay map with A–B cross-section line"></svg></div>
+          <div class="legend-card legend-dock">
+            <h3 id="legendTitle">Reflectivity (dBZ)</h3>
+            <div class="legend-body">
+              <div class="vbar"></div>
+              <div class="legend-ticks"><span>75</span><span>60</span><span>45</span><span>30</span><span>15</span><span>0</span><span>-30</span></div>
+            </div>
+            <div class="mask-row"><span class="swatch" style="background:#81d4ff"></span><span>Observed gates</span></div>
+            <div class="mask-row"><span class="swatch" style="background:repeating-linear-gradient(45deg,#ffd166 0 2px,#2b2110 2px 4px)"></span><span>Interpolated guide</span></div>
+            <div class="mask-row"><span class="swatch" style="background:#29384a"></span><span>No data</span></div>
+            <div class="small" style="margin-top:8px">Provenance: sweep manifest</div>
+          </div>
+        </div>
         <div id="selectedSliceLabel" class="map-callout slice-label">Selected A–B slice</div>
         <div id="radarOriginLabel" class="map-callout origin-label">Radar origin</div>
-        <div class="legend-card">
-          <h3 id="legendTitle">Reflectivity (dBZ)</h3>
-          <div class="legend-body">
-            <div class="vbar"></div>
-            <div class="legend-ticks"><span>75</span><span>60</span><span>45</span><span>30</span><span>15</span><span>0</span><span>-30</span></div>
-          </div>
-          <div class="mask-row"><span class="swatch" style="background:#81d4ff"></span><span>Observed gates</span></div>
-          <div class="mask-row"><span class="swatch" style="background:repeating-linear-gradient(45deg,#ffd166 0 2px,#2b2110 2px 4px)"></span><span>Interpolated guide</span></div>
-          <div class="mask-row"><span class="swatch" style="background:#29384a"></span><span>No data</span></div>
-          <div class="small" style="margin-top:8px">Provenance: sweep manifest</div>
-        </div>
         <div id="timelineScrubber" class="timeline" aria-label="compact timeline">
           <div class="timeline-head">
             <div id="playbackStatus" class="small">Paused · playback 1×</div>
