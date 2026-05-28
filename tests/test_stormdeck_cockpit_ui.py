@@ -161,3 +161,22 @@ def test_adaptive_view_sizing_sliders_are_available_and_stateful():
         "resetLayoutButton.addEventListener",
     ]:
         assert js_hook in html
+
+
+def test_adaptive_sizing_controls_have_mobile_touch_layout():
+    html = read_html()
+
+    assert 'name="viewport"' in html
+    assert "width=device-width" in html
+    assert "initial-scale=1" in html
+
+    for css_contract in [
+        "@media (max-width: 760px)",
+        "flex-wrap: wrap",
+        "touch-action: pan-y",
+        ".adaptive-sizing { grid-column: 1 / -1",
+        ".adaptive-sizing { min-width: 100%",
+        ".slider-field { grid-template-columns: 76px minmax(120px, 1fr) 34px",
+        "main { grid-template-columns: minmax(0, 1fr)",
+    ]:
+        assert css_contract in html

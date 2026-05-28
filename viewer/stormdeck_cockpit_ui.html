@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>StormDeck Cockpit UI</title>
   <style>
     :root {
@@ -40,6 +41,7 @@
     header {
       display: flex;
       align-items: center;
+      flex-wrap: nowrap;
       gap: 10px;
       padding: 0 14px;
       border-bottom: 1px solid rgba(152, 191, 234, 0.14);
@@ -81,8 +83,8 @@
     .slider-field { display: grid; grid-template-columns: auto minmax(54px, 1fr) 26px; align-items: center; gap: 5px; }
     .slider-field label { font-size: 9px; }
     .slider-field output { color: var(--cyan); font-size: 9px; text-align: right; font-weight: 800; }
-    input[type="range"] { width: 100%; accent-color: var(--cyan); }
-    .reset-layout { min-height: 22px; padding: 2px 7px; font-size: 9px; border-radius: 999px; }
+    input[type="range"] { width: 100%; accent-color: var(--cyan); touch-action: pan-y; }
+    .reset-layout { min-height: 22px; padding: 2px 7px; font-size: 9px; border-radius: 999px; touch-action: manipulation; }
     main {
       display: grid;
       grid-template-columns: minmax(640px, var(--replay-fr)) minmax(500px, var(--future-fr));
@@ -255,9 +257,47 @@
       font-weight: 800;
     }
     @media (max-width: 1180px) {
-      .shell { grid-template-rows: 42px auto auto; }
-      main { grid-template-columns: 1fr; grid-template-rows: 620px 160px 560px; }
+      .shell { grid-template-rows: auto auto auto; }
+      header { flex-wrap: wrap; min-height: 42px; padding-block: 6px; }
+      .adaptive-sizing { min-width: min(720px, 100%); }
+      main { grid-template-columns: minmax(0, 1fr); grid-template-rows: 620px 160px 560px; }
       .future { grid-column: 1; grid-row: auto; }
+      .bottom { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 760px) {
+      body { font-size: 13px; overflow-x: hidden; }
+      .shell { grid-template-rows: auto auto auto; }
+      header {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 6px 8px;
+        padding: 7px 8px;
+      }
+      .brand { font-size: 16px; }
+      .tag { min-height: 20px; padding: 2px 6px; font-size: 9px; }
+      header .spacer { display: none; }
+      .adaptive-sizing { grid-column: 1 / -1; }
+      .adaptive-sizing { min-width: 100%; }
+      .adaptive-sizing {
+        grid-template-columns: 1fr;
+        border-radius: 10px;
+        padding: 6px 8px;
+        gap: 5px;
+      }
+      .slider-field { grid-template-columns: 76px minmax(120px, 1fr) 34px; }
+      .slider-field label, .slider-field output { font-size: 10px; }
+      input[type="range"] { min-height: 28px; }
+      .reset-layout { min-height: 30px; width: 100%; }
+      main { grid-template-columns: minmax(0, 1fr); grid-template-rows: 560px var(--cross-row) 460px; }
+      .future { grid-column: 1; grid-row: auto; }
+      .replay .panel-head { height: auto; min-height: 76px; align-items: flex-start; padding: 7px 8px; }
+      .replay { grid-template-rows: auto minmax(0, 1fr) 56px; }
+      .control-row { justify-content: flex-start; }
+      .legend-card { right: 6px; width: 96px; transform: scale(.9); transform-origin: top right; }
+      .slice-label { left: 18px; top: 204px; }
+      .origin-label { left: 18px; bottom: 70px; }
       .bottom { grid-template-columns: 1fr; }
     }
   </style>
