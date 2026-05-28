@@ -27,8 +27,17 @@ def masked_numeric_array(var: Any, *, missing_threshold: float = MISSING_MOMENT_
     else:
         out = np.asarray(arr, dtype="float64")
 
-    fill = getattr(var, "_FillValue", None)
-    if fill is not None:
+    fill_values = []
+    for attr in ("_FillValue", "missing_value"):
+        value = getattr(var, attr, None)
+        if value is None:
+            continue
+        try:
+            values = list(value) if not isinstance(value, (str, bytes)) else [value]
+        except TypeError:
+            values = [value]
+        fill_values.extend(values)
+    for fill in fill_values:
         try:
             out[out == float(fill)] = np.nan
         except (TypeError, ValueError):

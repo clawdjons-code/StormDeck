@@ -56,7 +56,7 @@ def sample_inventory():
                 "start_time": "2026-04-02 01:08:45.115",
                 "end_time": "2026-04-02 01:08:52.295",
                 "sweep_count": 9,
-                "sweeps": [{"name": "sweep_0", "dims": {"time": 40, "range": 630, "prt": 3}, "sweep_mode": "rhi", "sweep_fixed_angle": 0.5000014901161194}],
+                "sweeps": [{"name": "sweep_0", "dims": {"time": 40, "range": 630, "prt": 3}, "sweep_mode": "rhi", "sweep_fixed_angle": 0.5000014901161194, "fixed_angle_type": "azimuth", "fixed_angle_deg": 200.6020965576172}],
             },
             {
                 "file": "/case/KATD_Base_Data_20260402_010852_340975400.nc",
@@ -89,7 +89,7 @@ def sample_inventory():
                 "start_time": "2026-04-02 01:10:40.062",
                 "end_time": "2026-04-02 01:10:47.242",
                 "sweep_count": 9,
-                "sweeps": [{"name": "sweep_0", "dims": {"time": 40, "range": 630, "prt": 3}, "sweep_mode": "rhi", "sweep_fixed_angle": 0.5000014901161194}],
+                "sweeps": [{"name": "sweep_0", "dims": {"time": 40, "range": 630, "prt": 3}, "sweep_mode": "rhi", "sweep_fixed_angle": 0.5000014901161194, "fixed_angle_type": "azimuth", "fixed_angle_deg": 202.6020965576172}],
             },
         ],
     }
@@ -145,3 +145,32 @@ def test_main_creates_missing_output_parent_directories(tmp_path):
     assert output_path.exists()
     timeline = json.loads(output_path.read_text(encoding="utf-8"))
     assert timeline["schema"] == "stormdeck.case_timeline.v0"
+
+
+def test_rhi_timeline_uses_derived_azimuth_fixed_angles_not_group_elevation_metadata():
+    mod = load_module()
+
+    timeline = mod.build_case_timeline(sample_inventory(), case_id="case")
+    rhi_volume = [v for v in timeline["volumes"] if v["scan_modes"] == ["rhi"]][0]
+    rhi_summary = timeline["scan_summaries"]["RHI_LDR_Narrow_Sector"]
+
+    assert rhi_volume["fixed_angle_type"] == "azimuth"
+    assert rhi_volume["fixed_angles_sample"] == [200.602097]
+    assert rhi_summary["fixed_angle_type_values"] == ["azimuth"]
+    assert rhi_summary["fixed_angles_sample"] == [200.602097, 202.602097]
+
+
+def test_rhi_without_coordinate_derived_angle_does_not_trust_group_fixed_angle():
+    mod = load_module()
+
+    fixed = mod.timeline_fixed_angle({
+        "name": "sweep_0",
+        "sweep_mode": "rhi",
+        "sweep_fixed_angle": 0.5000014901161194,
+    })
+
+    assert fixed == {
+        "type": "azimuth_missing",
+        "deg": None,
+        "source": "group_sweep_fixed_angle_not_trusted_for_rhi",
+    }

@@ -45,6 +45,20 @@ def test_shared_mask_helper_masks_katd_minus_999_and_fill_value():
     assert arr[0, 4] == 42.0
 
 
+def test_shared_mask_helper_masks_netcdf_missing_value_attribute():
+    mod = load_module(HELPER, "stormdeck_radar_arrays")
+
+    class MissingValueVar(FakeVar):
+        _FillValue = None
+        missing_value = -997.0
+
+    arr = mod.masked_numeric_array(MissingValueVar([[7.0, -997.0, -998.0]]))
+
+    assert arr[0, 0] == 7.0
+    assert np.isnan(arr[0, 1])
+    assert arr[0, 2] == -998.0
+
+
 def test_all_radar_renderers_use_shared_minus_999_masking_contract():
     modules = {
         "stormdeck_katd_replay_export": "masked_numeric_array",

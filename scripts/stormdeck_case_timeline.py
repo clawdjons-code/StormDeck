@@ -64,17 +64,50 @@ def volume_modes(file_row: Dict[str, Any]) -> List[str]:
     return sorted(set(modes))
 
 
+def timeline_fixed_angle(sweep: Dict[str, Any]) -> Dict[str, Any]:
+    """Return the fixed angle StormDeck should expose for timeline grouping.
+
+    Cf/Radial group-level ``sweep_fixed_angle`` can be misleading for KATD RHI
+    groups: observed samples report 0.5 degrees there while the actual fixed
+    coordinate is azimuth. Prefer coordinate-derived metadata when present.
+    """
+    if sweep.get("fixed_angle_deg") is not None:
+        return {
+            "type": sweep.get("fixed_angle_type") or "derived",
+            "deg": round(float(sweep["fixed_angle_deg"]), 6),
+            "source": "coordinate_derived",
+        }
+    if sweep.get("sweep_fixed_angle") is not None:
+        mode = str(sweep.get("sweep_mode") or "").lower()
+        if mode == "rhi":
+            return {
+                "type": "azimuth_missing",
+                "deg": None,
+                "source": "group_sweep_fixed_angle_not_trusted_for_rhi",
+            }
+        return {
+            "type": "elevation",
+            "deg": round(float(sweep["sweep_fixed_angle"]), 6),
+            "source": "group_sweep_fixed_angle",
+        }
+    return {"type": "unknown", "deg": None, "source": "missing"}
+
+
 def compact_volume(file_row: Dict[str, Any], idx: int) -> Dict[str, Any]:
     sweeps = clean_sweeps(file_row.get("sweeps") or [])
     start = file_row.get("start_time") or file_row.get("time_coverage_start")
     end = file_row.get("end_time") or file_row.get("time_coverage_end")
     fixed_angles = []
+    fixed_angle_types = []
     gate_counts = []
     ray_counts = []
     modes = []
     for sweep in sweeps:
-        if sweep.get("sweep_fixed_angle") is not None:
-            fixed_angles.append(round(float(sweep["sweep_fixed_angle"]), 6))
+        fixed = timeline_fixed_angle(sweep)
+        if fixed["deg"] is not None:
+            fixed_angles.append(fixed["deg"])
+        if fixed["type"] != "unknown":
+            fixed_angle_types.append(fixed["type"])
         dims = sweep.get("dims") or {}
         if dims.get("range") is not None:
             gate_counts.append(int(dims["range"]))
@@ -92,6 +125,7 @@ def compact_volume(file_row: Dict[str, Any], idx: int) -> Dict[str, Any]:
         "duration_s": seconds_between(start, end),
         "sweep_count": file_row.get("sweep_count") or len(sweeps),
         "scan_modes": sorted(set(modes)),
+        "fixed_angle_type": sorted(set(fixed_angle_types))[0] if len(set(fixed_angle_types)) == 1 else "mixed_or_unknown",
         "fixed_angles_sample": fixed_angles[:8],
         "ray_count_values_sample": sorted(set(ray_counts))[:8],
         "gate_count_values_sample": sorted(set(gate_counts), reverse=True)[:8],
@@ -137,6 +171,7 @@ def build_scan_summaries(files: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any
         gate_counts = set()
         ray_counts = set()
         fixed_angles = set()
+        fixed_angle_types = set()
         for row in rows:
             for sweep in clean_sweeps(row.get("sweeps") or []):
                 dims = sweep.get("dims") or {}
@@ -144,8 +179,11 @@ def build_scan_summaries(files: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any
                     gate_counts.add(int(dims["range"]))
                 if dims.get("time") is not None:
                     ray_counts.add(int(dims["time"]))
-                if sweep.get("sweep_fixed_angle") is not None:
-                    fixed_angles.add(round(float(sweep["sweep_fixed_angle"]), 6))
+                fixed = timeline_fixed_angle(sweep)
+                if fixed["deg"] is not None:
+                    fixed_angles.add(fixed["deg"])
+                if fixed["type"] != "unknown":
+                    fixed_angle_types.add(fixed["type"])
         size_values = sorted(float(r["size_mb"]) for r in rows if r.get("size_mb") is not None)
         summaries[scan_name] = {
             "count": len(rows),
@@ -155,6 +193,7 @@ def build_scan_summaries(files: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any
             "median_start_spacing_s": median_or_none(start_spacings_f),
             "size_mb_values_sample": sorted(set(size_values))[:8],
             "fixed_angles_sample": sorted(fixed_angles)[:12],
+            "fixed_angle_type_values": sorted(fixed_angle_types),
             "ray_count_values_sample": sorted(ray_counts, reverse=True)[:12],
             "gate_count_values_sample": sorted(gate_counts, reverse=True)[:12],
         }
@@ -214,6 +253,20 @@ def scalar_var(group: Any, name: str) -> Optional[Any]:
     return value
 
 
+def derived_fixed_angle_from_coords(group: Any, sweep_mode: Optional[str]) -> Dict[str, Any]:
+    import numpy as np  # type: ignore
+
+    mode = str(sweep_mode or "").lower()
+    coord_name = "azimuth" if mode == "rhi" else "elevation"
+    if coord_name not in group.variables:
+        return {"fixed_angle_type": None, "fixed_angle_deg": None}
+    vals = np.asarray(group.variables[coord_name][:], dtype="float64")
+    finite = vals[np.isfinite(vals)]
+    if not finite.size:
+        return {"fixed_angle_type": None, "fixed_angle_deg": None}
+    return {"fixed_angle_type": coord_name, "fixed_angle_deg": float(np.nanmean(finite))}
+
+
 def scan_cfradial_files(pattern: str, limit: Optional[int] = None) -> Dict[str, Any]:
     from netCDF4 import Dataset  # type: ignore
 
@@ -227,11 +280,15 @@ def scan_cfradial_files(pattern: str, limit: Optional[int] = None) -> Dict[str, 
             sweeps = []
             for gname in sorted([g for g in ds.groups if g.startswith("sweep_")], key=lambda s: int(s.split("_", 1)[1]) if s.split("_", 1)[1].isdigit() else s):
                 g = ds.groups[gname]
+                sweep_mode = scalar_var(g, "sweep_mode")
+                fixed = derived_fixed_angle_from_coords(g, sweep_mode if isinstance(sweep_mode, str) else None)
                 sweeps.append({
                     "name": gname,
                     "dims": {k: len(v) for k, v in g.dimensions.items()},
-                    "sweep_mode": scalar_var(g, "sweep_mode"),
+                    "sweep_mode": sweep_mode,
                     "sweep_fixed_angle": scalar_var(g, "sweep_fixed_angle"),
+                    "fixed_angle_type": fixed["fixed_angle_type"],
+                    "fixed_angle_deg": fixed["fixed_angle_deg"],
                     "variables": list(g.variables.keys()),
                 })
             rows.append({

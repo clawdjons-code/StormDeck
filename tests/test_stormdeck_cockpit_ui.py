@@ -217,6 +217,58 @@ def test_reflectivity_legend_is_docked_not_overlaying_2_5d_view():
         assert "transform:" not in rule
 
 
+def test_cockpit_is_manifest_ready_and_data_honest_before_real_data():
+    html = read_html()
+
+    for contract in [
+        'id="bundleRootInput"',
+        'id="loadBundleButton"',
+        'id="manifestStatus"',
+        'const cockpitState',
+        'loadCockpitBundle',
+        'fetchJson',
+        'applyManifestToCockpit',
+        'populateFieldAndSweepSelectorsFromManifest',
+        'currentFrame',
+        'stormdeck_bundle_manifest.json',
+        'bundle_validation.json',
+    ]:
+        assert contract in html
+
+    for honest_phrase in [
+        "Change panel unavailable until comparable frame deltas are loaded.",
+        "No meteorological 60-sec delta available",
+        "sample browse only — not time-continuous storm motion",
+        "2.5D visual emphasis; observed-gate source; not full volume retrieval",
+        "Transform status",
+        "field_value_deltas_included: false",
+        "QC pending",
+        "missing/flag counts required",
+        "Export embeds radar ID, field, units, time, source, and transform status",
+    ]:
+        assert honest_phrase in html
+
+    for forbidden_claim in [
+        "Reflectivity core shifted slightly along A–B.",
+        "Warning corridor overlay updated with the latest replay frame.",
+        "Pass</b><span>basic QC",
+        "Velocity (kt)",
+        "inbound / outbound",
+        "Waco",
+        "College Station",
+        "Topeka",
+        "Lawrence",
+    ]:
+        assert forbidden_claim not in html
+
+    for required_geography in ["Norman", "Moore", "Noble", "Purcell", "Chickasha", "Shawnee"]:
+        assert required_geography in html
+
+    assert "Velocity (m/s)" in html
+    assert "velocityScale" in html
+    assert "linear-gradient(180deg, #3b60ff" in html or "linear-gradient(90deg, #3b60ff" in html
+
+
 def test_visible_controls_have_real_behavior_hooks():
     html = read_html()
 
