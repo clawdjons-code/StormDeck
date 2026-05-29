@@ -694,8 +694,11 @@
       drawMapLabels(svg); drawRangeRings(svg); drawWarningCorridor(svg); drawActiveField(svg); drawSliceControls(svg);
       svg.appendChild(node('circle',{cx:285,cy:420,r:16,fill:'none',stroke:'rgba(102,217,255,.46)','stroke-width':3}));
       svg.appendChild(node('circle',{cx:285,cy:420,r:8,fill:C.cyan,stroke:'#07101c','stroke-width':3}));
-      svg.appendChild(text(52,78,'2.5D visual emphasis; observed-gate source; not full volume retrieval',15,C.ink,850));
-      svg.appendChild(text(52,102,'Mock guide until a bundle manifest loads · sample browse only — not time-continuous storm motion',13,'#aec2d5',650));
+      const frame = currentFrame();
+      if (!frame || !frame.quicklook_exists || !frame.quicklook_path) {
+        svg.appendChild(text(52,78,'2.5D visual emphasis; observed-gate source; not full volume retrieval',15,C.ink,850));
+        svg.appendChild(text(52,102,'Mock guide until a bundle manifest loads · sample browse only — not time-continuous storm motion',13,'#aec2d5',650));
+      }
     }
     function drawCrossSection() {
       const svg = document.getElementById('crossSection'); svg.setAttribute('viewBox','0 0 900 240'); svg.replaceChildren(); svg.appendChild(node('rect',{x:0,y:0,width:900,height:240,fill:'#07101c'}));
@@ -744,10 +747,45 @@
       crossHeightValue.value = `${crossValue}`;
       bottomCardValue.value = `${bottomValue}`;
     }
+    function manifestFrames() {
+      return cockpitState.engineManifest && Array.isArray(cockpitState.engineManifest.frames) ? cockpitState.engineManifest.frames : [];
+    }
+    function manifestVolumeOrdinals() {
+      return Array.from(new Set(manifestFrames().map(frame => Number(frame.volume_ordinal || 0)))).sort((a, b) => a - b);
+    }
+    function frameMatchesSelection(frame, field, sweep, volumeOrdinal) {
+      if (!frame) return false;
+      const frameField = canonicalField(frame.field);
+      const frameSweep = frame.sweep_name || frame.fixed_angle_display;
+      return Number(frame.volume_ordinal || 0) === Number(volumeOrdinal || 0) && frameField === canonicalField(field) && frameSweep === sweep;
+    }
+    function selectedFrameIndex() {
+      const frames = manifestFrames();
+      if (!frames.length) return -1;
+      const volumeOrdinal = cockpitState.currentVolumeOrdinal || 0;
+      const field = fieldSelect ? fieldSelect.value : 'REF';
+      const sweep = sweepSelect ? sweepSelect.value : '';
+      let index = frames.findIndex(frame => frameMatchesSelection(frame, field, sweep, volumeOrdinal));
+      if (index >= 0) return index;
+      index = frames.findIndex(frame => Number(frame.volume_ordinal || 0) === Number(volumeOrdinal || 0) && canonicalField(frame.field) === canonicalField(field));
+      if (index >= 0) return index;
+      index = frames.findIndex(frame => Number(frame.volume_ordinal || 0) === Number(volumeOrdinal || 0));
+      return index >= 0 ? index : 0;
+    }
+    function syncCurrentFrameToSelection() {
+      const index = selectedFrameIndex();
+      if (index >= 0) cockpitState.currentFrameIndex = index;
+      return currentFrame();
+    }
+    function updateFrameSelectorsFromFrame(frame) {
+      if (!frame) return;
+      if (frame.field) fieldSelect.value = canonicalField(frame.field);
+      if (frame.sweep_name || frame.fixed_angle_display) sweepSelect.value = frame.sweep_name || frame.fixed_angle_display;
+    }
     function applyFieldAndSweep() {
       const field = fieldSelect.value;
       const sweep = sweepSelect.value;
-      const frame = currentFrame();
+      const frame = syncCurrentFrameToSelection();
       const info = fieldInfo(field);
       const realQuicklook = Boolean(frame && frame.quicklook_exists && frame.quicklook_path);
       legendTitle.textContent = info.legend;
@@ -756,8 +794,8 @@
       legend.classList.toggle('spectrumWidthScale', info.kind === 'spectrum_width');
       legendProvenance.textContent = realQuicklook ? 'Provenance: observed_native_quicklook_png displayed · Transform status visible in export' : 'Provenance: mock_visual_guide_not_real_data · Transform status visible in export';
       replayViewScope.textContent = `${info.label} · ${sweep} sweep · ${info.units} · ${realQuicklook ? 'observed quicklook browse' : 'mock visual guide'} · warning corridor`;
-      scanAgeBadge.textContent = frame ? `Replay frame · scan age not live · ${frame.interpretation_limit || 'sample browse only — not time-continuous storm motion'}` : `Latest scan age unavailable · mock visual guide`;
-      playbackStatus.textContent = `Paused · ${field} · ${sweep}`;
+      scanAgeBadge.textContent = frame ? `Replay volume ${Number(frame.volume_ordinal || 0) + 1}/${Math.max(1, manifestVolumeOrdinals().length)} · scan age not live · ${frame.interpretation_limit || 'sample browse only — not time-continuous storm motion'}` : `Latest scan age unavailable · mock visual guide`;
+      playbackStatus.textContent = `Paused · ${field} · ${sweep} · volume ${frame ? Number(frame.volume_ordinal || 0) + 1 : 1}`;
       updateProvenancePanel();
       drawReplayMap();
       drawCrossSection();
@@ -768,23 +806,32 @@
       return raw ? raw.replace(/^.*T?([0-9]{2}:[0-9]{2}:[0-9]{2}).*$/, '$1') : `frame ${cockpitState.currentFrameIndex + 1}`;
     }
     function currentFrame() {
-      const frames = cockpitState.engineManifest && Array.isArray(cockpitState.engineManifest.frames) ? cockpitState.engineManifest.frames : [];
+      const frames = manifestFrames();
       return frames[cockpitState.currentFrameIndex] || null;
     }
     function advancePlaybackFrame() {
-      const frames = cockpitState.engineManifest && Array.isArray(cockpitState.engineManifest.frames) ? cockpitState.engineManifest.frames : [];
-      const count = frames.length || replayTimes.length;
-      playbackFrame = (playbackFrame + 1) % count;
-      cockpitState.currentFrameIndex = playbackFrame;
-      const frame = currentFrame();
-      latestTimeLabel.textContent = `Current time · ${frameTimeLabel(frame)}Z`;
-      timelineKnob.style.left = `${18 + (count > 1 ? playbackFrame * (64 / (count - 1)) : 0)}%`;
-      playbackStatus.textContent = `Playing · frame ${playbackFrame + 1}/${count} · playback 1× · sample browse only — not time-continuous storm motion`;
-      if (frame) {
-        fieldSelect.value = frame.field ? canonicalField(frame.field) : fieldSelect.value;
-        sweepSelect.value = frame.sweep_name || frame.fixed_angle_display || sweepSelect.value;
+      const frames = manifestFrames();
+      if (!frames.length) {
+        const count = replayTimes.length;
+        playbackFrame = (playbackFrame + 1) % count;
+        latestTimeLabel.textContent = `Current time · ${frameTimeLabel(null)}Z`;
+        timelineKnob.style.left = `${18 + (count > 1 ? playbackFrame * (64 / (count - 1)) : 0)}%`;
+        playbackStatus.textContent = `Playing · mock frame ${playbackFrame + 1}/${count} · playback 1×`;
+        drawReplayMap();
+        return;
       }
+      const ordinals = manifestVolumeOrdinals();
+      const currentOrdinal = cockpitState.currentVolumeOrdinal || 0;
+      const ordinalIndex = Math.max(0, ordinals.indexOf(currentOrdinal));
+      const nextOrdinal = ordinals[(ordinalIndex + 1) % ordinals.length];
+      cockpitState.currentVolumeOrdinal = nextOrdinal;
+      const frame = syncCurrentFrameToSelection();
+      latestTimeLabel.textContent = `Current time · ${frameTimeLabel(frame)}Z`;
+      timelineKnob.style.left = `${18 + (ordinals.length > 1 ? ordinals.indexOf(nextOrdinal) * (64 / (ordinals.length - 1)) : 0)}%`;
+      playbackStatus.textContent = `Playing · volume ${ordinals.indexOf(nextOrdinal) + 1}/${ordinals.length} · ${fieldSelect.value} · ${sweepSelect.value} · playback 1× · sample browse only — not time-continuous storm motion`;
       updateProvenancePanel();
+      drawReplayMap();
+      drawCrossSection();
     }
     function togglePlayback() {
       if (playbackTimer) {
@@ -917,12 +964,12 @@
     function applyManifestToCockpit(manifest) {
       cockpitState.engineManifest = manifest;
       cockpitState.currentFrameIndex = 0;
+      cockpitState.currentVolumeOrdinal = 0;
       playbackFrame = 0;
       populateFieldAndSweepSelectorsFromManifest(manifest);
       const frame = currentFrame();
       if (frame) {
-        if (frame.field) fieldSelect.value = canonicalField(frame.field);
-        if (frame.sweep_name || frame.fixed_angle_display) sweepSelect.value = frame.sweep_name || frame.fixed_angle_display;
+        updateFrameSelectorsFromFrame(frame);
         latestTimeLabel.textContent = `Current time · ${frameTimeLabel(frame)}Z`;
       }
       renderTimelineTicksFromFrames(manifest.frames || []);
@@ -978,7 +1025,7 @@
     const qcScanTime = document.getElementById('qcScanTime');
     const qcTransformStatus = document.getElementById('qcTransformStatus');
     const qcStatus = document.getElementById('qcStatus');
-    const cockpitState = { bundleRoot: '.', engineManifest: null, validation: null, currentFrameIndex: 0 };
+    const cockpitState = { bundleRoot: '.', engineManifest: null, validation: null, currentFrameIndex: 0, currentVolumeOrdinal: 0 };
     const replayTimes = ['19:51:24', '20:01:24', '20:11:24', '20:21:24', '20:31:24'];
     let playbackFrame = 2;
     let playbackTimer = null;

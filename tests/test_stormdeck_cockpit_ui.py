@@ -287,6 +287,10 @@ def test_cockpit_real_manifest_contract_handles_ref_vel_sw_quicklooks_and_qc_hon
         "missing/flag counts required",
         "renderTimelineTicksFromFrames",
         "volume_start_time",
+        "manifestVolumeOrdinals",
+        "syncCurrentFrameToSelection",
+        "currentVolumeOrdinal",
+        "Replay volume",
     ]:
         assert contract in html
 
