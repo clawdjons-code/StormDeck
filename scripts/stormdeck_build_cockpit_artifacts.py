@@ -23,6 +23,7 @@ from stormdeck_field_preview import (
     filter_playlist_previews,
 )
 from stormdeck_map_overlays import build_map_overlays
+from stormdeck_vertical_slice import build_vertical_slice_from_cfradial, build_vertical_slice_playlist
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_MAP_CONFIG = ROOT / "examples" / "map_overlay_config.sample.json"
@@ -86,6 +87,42 @@ def build_field_playlist_for_bundle(
     )
 
 
+def build_vertical_slice_playlist_for_bundle(
+    bundle_root: Path,
+    *,
+    field: str = "REF",
+    sweep: Optional[str] = None,
+    sweep_index: int = 0,
+    strict_compatible: bool = False,
+    max_rays: int = 180,
+    max_gates: int = 420,
+) -> Optional[Dict[str, Any]]:
+    index = read_json(bundle_root / "ppi_tprt_replay_index.json")
+    files = resolve_volume_files(bundle_root, index)
+    slices: List[Dict[str, Any]] = []
+    for path in files:
+        if not path.exists():
+            continue
+        try:
+            slices.append(
+                build_vertical_slice_from_cfradial(
+                    path,
+                    field=field,
+                    sweep=sweep,
+                    sweep_index=sweep_index,
+                    max_rays=max_rays,
+                    max_gates=max_gates,
+                )
+            )
+        except ValueError as exc:
+            if "native RHI-like geometry" not in str(exc):
+                raise
+            continue
+    if not slices:
+        return None
+    return build_vertical_slice_playlist(slices, case_id=index.get("case_id"), field=field, strict_compatible=strict_compatible)
+
+
 def maybe_build_map_overlays(config_path: Optional[Path]) -> Optional[Dict[str, Any]]:
     if config_path is None:
         return None
@@ -106,6 +143,12 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser.add_argument("--max-rays", type=int, default=240)
     parser.add_argument("--max-gates", type=int, default=480)
     parser.add_argument("--field-preview-out", default="field_preview_playlist.json")
+    parser.add_argument("--skip-vertical-slice", action="store_true", help="Do not attempt native RHI vertical-slice sidecar export")
+    parser.add_argument("--vertical-slice-field", default=None, help="Field for vertical_slice_playlist.json; defaults to --field")
+    parser.add_argument("--vertical-slice-sweep", default=None, help="Native RHI sweep group name for vertical slice")
+    parser.add_argument("--vertical-slice-sweep-index", type=int, default=0)
+    parser.add_argument("--vertical-slice-out", default="vertical_slice_playlist.json")
+    parser.add_argument("--strict-vertical-slice-playlist", action="store_true", help="Fail on mixed native-RHI vertical slice playlists")
     parser.add_argument("--map-config", default=str(DEFAULT_MAP_CONFIG), help="stormdeck.map_overlay_config.v0 JSON; pass empty string to skip")
     parser.add_argument("--map-out", default="map_overlays.json")
     args = parser.parse_args(argv)
@@ -127,6 +170,25 @@ def main(argv: Optional[List[str]] = None) -> int:
     print(f"wrote field preview playlist: {field_out}")
     print(f"field_preview_schema: {playlist['schema']}")
     print(f"field_preview_frames: {playlist['frame_count']}")
+
+    if not args.skip_vertical_slice:
+        vertical_playlist = build_vertical_slice_playlist_for_bundle(
+            bundle_root,
+            field=args.vertical_slice_field or args.field,
+            sweep=args.vertical_slice_sweep,
+            sweep_index=args.vertical_slice_sweep_index,
+            strict_compatible=args.strict_vertical_slice_playlist,
+            max_rays=args.max_rays,
+            max_gates=args.max_gates,
+        )
+        if vertical_playlist is not None:
+            vertical_out = bundle_root / args.vertical_slice_out
+            vertical_out.write_text(json.dumps(vertical_playlist, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+            print(f"wrote vertical slice playlist: {vertical_out}")
+            print(f"vertical_slice_schema: {vertical_playlist['schema']}")
+            print(f"vertical_slice_frames: {vertical_playlist['frame_count']}")
+        else:
+            print("vertical slice skipped: no native RHI sweep found")
 
     config = Path(args.map_config).expanduser().resolve() if args.map_config else None
     overlays = maybe_build_map_overlays(config)

@@ -463,9 +463,29 @@ def test_cockpit_labels_cross_section_and_4d_as_concept_not_loaded_data():
     html = read_html()
 
     for contract in [
+        'native RHI observed gates when vertical_slice loads · otherwise concept guide only',
         'concept guide only · not generated from loaded radar data',
         'concept only · not generated from loaded radar data',
         '4D concept view is not generated from loaded radar data yet',
         'Cross-section/4D are concept only, not generated from loaded radar data',
+    ]:
+        assert contract in html
+
+
+def test_cockpit_can_render_native_rhi_vertical_slice_sidecar():
+    html = read_html()
+
+    for contract in [
+        'verticalSlicePlaylist',
+        'verticalSlice',
+        'vertical_slice_playlist.json',
+        'vertical_slice.json',
+        'stormdeck.vertical_slice_playlist.v0',
+        'stormdeck.vertical_slice.v0',
+        'currentVerticalSlice',
+        'renderVerticalSliceCrossSection',
+        'native RHI observed gates',
+        'not arbitrary A-B interpolation',
+        'observed_native_rhi_vertical_slice_sampled_gates',
     ]:
         assert contract in html

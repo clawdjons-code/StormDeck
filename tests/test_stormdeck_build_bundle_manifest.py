@@ -73,6 +73,8 @@ def test_build_bundle_manifest_creates_godot_ready_playlist(tmp_path):
     assert bundle["compatibility"]["temporal_comparison"] == "sample_browse_only"
     assert bundle["validation"]["status"] == "ready"
     assert bundle["fields"] == ["REF", "VEL", "SW"]
+    assert bundle["sidecars"]["vertical_slice_playlist"]["path"] == "vertical_slice_playlist.json"
+    assert bundle["sidecars"]["vertical_slice_playlist"]["exists"] is False
     assert len(bundle["frames"]) == 3
     first = bundle["frames"][0]
     assert first["volume_id"] == "KATD_Base_Data_20260522_123630_436049100"

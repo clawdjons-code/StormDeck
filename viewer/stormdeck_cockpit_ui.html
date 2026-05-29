@@ -451,7 +451,7 @@
         <div class="panel-head">
           <div>
             <div class="panel-title">Vertical A–B Cross Section</div>
-            <div class="panel-sub">concept guide only · not generated from loaded radar data until gate-volume sampling exists</div>
+            <div class="panel-sub">native RHI observed gates when vertical_slice loads · otherwise concept guide only</div>
           </div>
         </div>
         <div class="canvas-wrap"><svg id="crossSection" role="img" aria-label="Vertical A–B Cross Section"></svg></div>
@@ -620,6 +620,16 @@
       if (frames.length < 2) return null;
       const index = Math.max(0, Math.min(frames.length - 1, Number(cockpitState.currentVolumeOrdinal) || 0));
       return index > 0 ? frames[index - 1]?.preview ?? null : null;
+    }
+    function currentVerticalSlice() {
+      const frames = cockpitState.verticalSlicePlaylist?.frames ?? [];
+      if (frames.length) {
+        const targetField = canonicalField(fieldSelect?.value);
+        const ordinal = Number(cockpitState.currentVolumeOrdinal) || 0;
+        const sameField = frames.filter(record => canonicalField(record?.vertical_slice?.field?.name) === targetField);
+        return (sameField[Math.max(0, Math.min(sameField.length - 1, ordinal))] || frames[Math.max(0, Math.min(frames.length - 1, ordinal))] || frames[0])?.vertical_slice ?? null;
+      }
+      return cockpitState.verticalSlice;
     }
     function clearCanvas(canvas, label) {
       if (!canvas) return;
@@ -1032,7 +1042,12 @@
       for (let x=80; x<=820; x+=92) svg.appendChild(node('line',{x1:x,y1:34,x2:x,y2:196,stroke:'rgba(152,191,234,.10)'}));
       for (let y=44; y<=194; y+=38) svg.appendChild(node('line',{x1:70,y1:y,x2:840,y2:y,stroke:'rgba(152,191,234,.10)'}));
       svg.appendChild(node('line',{x1:70,y1:196,x2:840,y2:196,stroke:C.grid,'stroke-width':2})); svg.appendChild(node('line',{x1:70,y1:34,x2:70,y2:196,stroke:C.grid,'stroke-width':2}));
-      svg.appendChild(text(30,42,'kft',12,C.muted,700)); svg.appendChild(text(807,222,'Distance nm',12,C.muted,700));
+      svg.appendChild(text(30,42,'kft',12,C.muted,700)); svg.appendChild(text(807,222,'Range',12,C.muted,700));
+      const verticalSlice = currentVerticalSlice();
+      if (verticalSlice) {
+        renderVerticalSliceCrossSection(svg, verticalSlice);
+        return;
+      }
       svg.appendChild(text(52,203,'A',18,C.ink,900)); svg.appendChild(text(846,203,'B',18,C.ink,900));
       const distance = sliceDistanceNm();
       const shift = Math.max(-90, Math.min(140, (sliceState.a.x - 132) * 0.28));
@@ -1042,7 +1057,38 @@
       svg.appendChild(node('path',{d:`M450 ${180 + tilt/3} C520 ${154 + tilt/2} 604 148 742 168`,stroke:C.green,'stroke-width':18,opacity:.48,fill:'none'}));
       svg.appendChild(node('path',{d:'M690 38 L840 38 L840 196 L690 196 Z',fill:'rgba(41,56,74,.50)',stroke:'rgba(152,191,234,.22)','stroke-dasharray':'6 7'}));
       svg.appendChild(text(704,58,'no-data mask',12,C.muted,800));
-      svg.appendChild(text(96,24,`A–B ${distance} nm · ${sliceModeSelect.value} · ${sliceInterpSelect.value} · observed gates + interpolated guide`,13,'#d9ecff',800));
+      svg.appendChild(text(96,24,`A–B ${distance} nm · ${sliceModeSelect.value} · ${sliceInterpSelect.value} · concept guide only · not generated from loaded radar data`,13,'#d9ecff',800));
+    }
+    function renderVerticalSliceCrossSection(svg, verticalSlice) {
+      const ranges = (verticalSlice?.coordinates?.range_m ?? []).map(Number);
+      const elevations = (verticalSlice?.coordinates?.elevation_deg ?? []).map(Number);
+      const values = verticalSlice?.values ?? [];
+      const fieldName = verticalSlice?.field?.name || fieldSelect.value;
+      const stats = verticalSlice?.field?.stats || {};
+      const vmin = Number.isFinite(Number(stats.p01)) ? Number(stats.p01) : Number(stats.min ?? 0);
+      const vmax = Number.isFinite(Number(stats.p99)) ? Number(stats.p99) : Number(stats.max ?? 1);
+      const maxRange = Math.max(1, ...ranges.filter(Number.isFinite));
+      const minEl = Math.min(...elevations.filter(Number.isFinite));
+      const maxEl = Math.max(minEl + 0.1, ...elevations.filter(Number.isFinite));
+      const plot = { x:70, y:34, w:770, h:162 };
+      const cellW = Math.max(1.5, plot.w / Math.max(1, ranges.length));
+      const cellH = Math.max(1.5, plot.h / Math.max(1, elevations.length));
+      values.forEach((row, ri) => {
+        const el = Number(elevations[ri]);
+        if (!Number.isFinite(el)) return;
+        const y = plot.y + plot.h - ((el - minEl) / (maxEl - minEl)) * plot.h;
+        (row || []).forEach((raw, gi) => {
+          const value = Number(raw);
+          const range = Number(ranges[gi]);
+          if (!Number.isFinite(value) || !Number.isFinite(range)) return;
+          const x = plot.x + (range / maxRange) * plot.w;
+          svg.appendChild(node('rect',{x:x-cellW/2,y:y-cellH/2,width:cellW,height:cellH,fill:colorForField(fieldName,value,vmin,vmax),opacity:.86}));
+        });
+      });
+      svg.appendChild(text(52,203,'RHI',18,C.ink,900));
+      svg.appendChild(text(96,24,'native RHI observed gates · not arbitrary A-B interpolation · no gridding',13,'#d9ecff',800));
+      svg.appendChild(text(640,58,`fixed azimuth ${Number(verticalSlice?.sweep?.fixed_azimuth_deg ?? NaN).toFixed(1)}°`,12,C.muted,800));
+      svg.appendChild(text(640,76,`${fieldInfo(fieldName).label} · ${fieldInfo(fieldName).units}`,12,C.muted,800));
     }
     function drawFutureView() {
       const svg = document.getElementById('futureView'); setViewBox(svg);
@@ -1286,8 +1332,9 @@
       qcRadarId.textContent = (manifest && (manifest.radar_id || manifest.site || manifest.case_id)) || 'KATD';
       qcScanTime.textContent = frame ? (frame.volume_start_time || frameTimeLabel(frame)) : '20:11:24Z';
       const realFieldPreview = Boolean(currentFieldPreview());
+      const realVerticalSlice = Boolean(currentVerticalSlice());
       const realQuicklook = Boolean(frame && frame.quicklook_exists && frame.quicklook_path);
-      qcTransformStatus.textContent = realFieldPreview ? 'observed_field_preview_sampled_gates' : (realQuicklook ? 'observed_native_quicklook_reference_only' : 'mock_visual_guide_not_real_data');
+      qcTransformStatus.textContent = realVerticalSlice ? 'observed_native_rhi_vertical_slice_sampled_gates' : (realFieldPreview ? 'observed_field_preview_sampled_gates' : (realQuicklook ? 'observed_native_quicklook_reference_only' : 'mock_visual_guide_not_real_data'));
       qcStatus.textContent = 'QC pending';
       manifestStatus.textContent = manifest ? `Manifest: ${manifest.schema || 'stormdeck_bundle_manifest.json'} · ${manifest.frame_count || (manifest.frames || []).length || 0} frames · quicklook validation is not QC · field_value_deltas_included: false` : 'Manifest: mock visual guide · field_value_deltas_included: false';
       renderWhatChangedUnavailable();
@@ -1311,6 +1358,8 @@
     async function loadOptionalCockpitArtifacts(root) {
       cockpitState.fieldPreview = null;
       cockpitState.fieldPreviewPlaylist = null;
+      cockpitState.verticalSlice = null;
+      cockpitState.verticalSlicePlaylist = null;
       cockpitState.mapOverlays = null;
       try {
         const playlist = await fetchJson(joinPath(root, 'field_preview_playlist.json'));
@@ -1328,6 +1377,17 @@
         if (overlays?.schema === 'stormdeck.map_overlays.v0') cockpitState.mapOverlays = overlays;
       } catch (overlayError) {
         cockpitState.mapOverlays = null;
+      }
+      try {
+        const verticalPlaylist = await fetchJson(joinPath(root, 'vertical_slice_playlist.json'));
+        if (verticalPlaylist?.schema === 'stormdeck.vertical_slice_playlist.v0') cockpitState.verticalSlicePlaylist = verticalPlaylist;
+      } catch (verticalPlaylistError) {
+        try {
+          const verticalSlice = await fetchJson(joinPath(root, 'vertical_slice.json'));
+          if (verticalSlice?.schema === 'stormdeck.vertical_slice.v0') cockpitState.verticalSlice = verticalSlice;
+        } catch (verticalSliceError) {
+          cockpitState.verticalSlice = null;
+        }
       }
     }
     async function loadCockpitBundle() {
@@ -1379,7 +1439,7 @@
     const qcScanTime = document.getElementById('qcScanTime');
     const qcTransformStatus = document.getElementById('qcTransformStatus');
     const qcStatus = document.getElementById('qcStatus');
-    const cockpitState = { bundleRoot: '.', engineManifest: null, validation: null, currentFrameIndex: 0, currentVolumeOrdinal: 0, fieldPreview: null, fieldPreviewPlaylist: null, mapOverlays: null, sceneMode: 'native-polar', sceneTiltDeg: 42, verticalExaggeration: 30, animationPhase: 0 };
+    const cockpitState = { bundleRoot: '.', engineManifest: null, validation: null, currentFrameIndex: 0, currentVolumeOrdinal: 0, fieldPreview: null, fieldPreviewPlaylist: null, verticalSlice: null, verticalSlicePlaylist: null, mapOverlays: null, sceneMode: 'native-polar', sceneTiltDeg: 42, verticalExaggeration: 30, animationPhase: 0 };
     const replayTimes = ['19:51:24', '20:01:24', '20:11:24', '20:21:24', '20:31:24'];
     let playbackFrame = 2;
     let playbackTimer = null;

@@ -94,6 +94,11 @@ def build_bundle_manifest(root: Path) -> Dict[str, Any]:
     validation_path = root / "bundle_validation.json"
     validation = read_json(validation_path) if validation_path.exists() else {"status": "not_run"}
     frames = build_frames(root, index)
+    sidecars = {
+        "field_preview_playlist": {"path": "field_preview_playlist.json", "schema": "stormdeck.field_preview_playlist.v0", "exists": (root / "field_preview_playlist.json").exists()},
+        "vertical_slice_playlist": {"path": "vertical_slice_playlist.json", "schema": "stormdeck.vertical_slice_playlist.v0", "exists": (root / "vertical_slice_playlist.json").exists()},
+        "map_overlays": {"path": "map_overlays.json", "schema": "stormdeck.map_overlays.v0", "exists": (root / "map_overlays.json").exists()},
+    }
     return {
         "schema": "stormdeck.bundle_manifest.v0",
         "bundle_root_hint": ".",
@@ -104,6 +109,7 @@ def build_bundle_manifest(root: Path) -> Dict[str, Any]:
         "scan_name": index.get("scan_name"),
         "scan_mode": index.get("scan_mode"),
         "fields": list(FIELDS),
+        "sidecars": sidecars,
         "volume_count": len(index.get("volumes") or []),
         "frame_count": len(frames),
         "validation": {

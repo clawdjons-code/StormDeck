@@ -13,15 +13,20 @@ def test_cockpit_artifact_builder_writes_field_preview_playlist_and_map_overlays
 
     for contract in [
         "field_preview_playlist.json",
+        "vertical_slice_playlist.json",
         "map_overlays.json",
         "ppi_tprt_replay_index.json",
         "build_field_preview_from_cfradial",
         "build_field_preview_playlist",
+        "build_vertical_slice_from_cfradial",
+        "build_vertical_slice_playlist",
         "filter_playlist_previews",
         "build_map_overlays",
         "stormdeck.map_overlay_config.v0",
         "--field",
         "--sweep-index",
+        "--vertical-slice-out",
+        "--skip-vertical-slice",
         "--map-config",
     ]:
         assert contract in source
