@@ -213,13 +213,33 @@
       grid-row: 2;
       min-height: 0;
       display: grid;
-      grid-template-columns: minmax(0, 1fr) 120px;
+      grid-template-columns: minmax(0, 1fr) 156px;
+      grid-template-rows: auto auto 1fr;
       gap: 8px;
       padding: 0 10px 0 0;
       overflow: hidden;
     }
-    .replay .canvas-wrap { position: relative; grid-column: 1; inset: auto; min-height: 0; }
-    .legend-dock { grid-column: 2; justify-self: stretch; margin-top: 8px; }
+    .replay .canvas-wrap { position: relative; grid-column: 1; grid-row: 1 / span 3; inset: auto; min-height: 0; }
+    .replay-canvas-stack { background: #07101c; border-right: 1px solid rgba(152,191,234,.10); }
+    #replayFieldCanvas, .replayOverlay { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+    #replayFieldCanvas { z-index: 1; }
+    .replayOverlay { z-index: 2; pointer-events: auto; }
+    .legend-dock { grid-column: 2; grid-row: 1; justify-self: stretch; margin-top: 8px; }
+    .quicklook-dock {
+      grid-column: 2;
+      grid-row: 2;
+      justify-self: stretch;
+      border: 1px solid rgba(75, 112, 150, 0.62);
+      border-radius: 8px;
+      padding: 8px;
+      background: rgba(3, 8, 16, 0.96);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.02);
+    }
+    .quicklook-dock h3 { margin: 0 0 7px; font-size: 10px; color: #d9ecff; text-transform: uppercase; letter-spacing: 0.05em; }
+    #quicklookThumb { width: 100%; max-height: 104px; object-fit: contain; border-radius: 6px; border: 1px solid rgba(152,191,234,.18); background:#050913; }
+    #quicklookThumb:not([src]) { display: none; }
+    .quicklook-status { margin-top: 6px; line-height: 1.25; }
+    .data-status-dock { grid-column: 2; grid-row: 3; align-self: start; color: var(--muted); font-size: 9px; line-height: 1.25; }
     .replay .scan-badge { top: 58px; }
     .replay .scope-card { top: 100px; }
     .bottom { display: grid; grid-template-columns: 1.2fr 1fr 220px; gap: 8px; padding: 0 8px 8px; }
@@ -310,9 +330,11 @@
       .replay .panel-head { height: auto; min-height: 76px; align-items: flex-start; padding: 7px 8px; }
       .replay { grid-template-rows: auto minmax(0, 1fr) 56px; }
       .control-row { justify-content: flex-start; }
-      .replay-workspace { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr) auto; padding: 0 8px; gap: 6px; }
+      .replay-workspace { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr) auto auto auto; padding: 0 8px; gap: 6px; }
       .replay .canvas-wrap { grid-column: 1; grid-row: 1; }
       .legend-dock { grid-column: 1; grid-row: 2; max-width: none; margin-top: 0; }
+      .quicklook-dock { grid-column: 1; grid-row: 3; }
+      .data-status-dock { grid-column: 1; grid-row: 4; }
       .legend-dock .legend-body { grid-template-columns: 1fr; }
       .legend-dock .vbar { width: 100%; min-height: 10px; height: 10px; background: linear-gradient(90deg, #2b72ff, #35c6ff, #34c97b, #f5e642, #ff9f43, #ff3b4f, #d76dff); }
       .legend-dock.velocityScale .vbar { background: linear-gradient(90deg, #3b60ff, #66d9ff, #f2f7ff, #ffd166, #ff4f6d); }
@@ -391,7 +413,10 @@
           </div>
         </div>
         <div class="replay-workspace">
-          <div class="canvas-wrap"><svg id="replayMap" role="img" aria-label="2.5D replay map with A–B cross-section line"></svg></div>
+          <div class="canvas-wrap replay-canvas-stack">
+            <canvas id="replayFieldCanvas" width="900" height="620" role="img" aria-label="Observed-gate field preview primary replay layer"></canvas>
+            <svg id="replayMap" class="replayOverlay" role="img" aria-label="Replay overlays: A–B cross-section line and cockpit annotations"></svg>
+          </div>
           <div class="legend-card legend-dock">
             <h3 id="legendTitle">Reflectivity (dBZ)</h3>
             <div class="legend-body">
@@ -403,6 +428,12 @@
             <div class="mask-row"><span class="swatch" style="background:#29384a"></span><span>No data</span></div>
             <div id="legendProvenance" class="small" style="margin-top:8px">Provenance: sweep manifest · Transform status visible in export</div>
           </div>
+          <div id="quicklookDock" class="quicklook-dock" aria-label="Native quicklook reference viewer">
+            <h3>Quicklook reference</h3>
+            <img id="quicklookThumb" alt="Observed native quicklook PNG reference" />
+            <div id="quicklookStatus" class="small quicklook-status">Quicklook PNG kept as reference only; primary layer is observed-gate field_preview when available.</div>
+          </div>
+          <div id="fieldPreviewStatus" class="data-status-dock">Primary layer waits for <span class="mono">field_preview.json</span> or <span class="mono">field_preview_playlist.json</span>. Map overlays load from <span class="mono">map_overlays.json</span> when present.</div>
         </div>
         <div id="selectedSliceLabel" class="map-callout slice-label">Selected A–B slice</div>
         <div id="radarOriginLabel" class="map-callout origin-label">Radar origin</div>
@@ -420,7 +451,7 @@
         <div class="panel-head">
           <div>
             <div class="panel-title">Vertical A–B Cross Section</div>
-            <div class="panel-sub">height and distance axes from the selected A–B cross-section line</div>
+            <div class="panel-sub">concept guide only · not generated from loaded radar data until gate-volume sampling exists</div>
           </div>
         </div>
         <div class="canvas-wrap"><svg id="crossSection" role="img" aria-label="Vertical A–B Cross Section"></svg></div>
@@ -430,12 +461,12 @@
         <div class="panel-head">
           <div>
             <div class="panel-title">4D View Concept</div>
-            <div class="panel-sub">same case, same warning corridor, restrained 3D radar volume</div>
+            <div class="panel-sub">concept only · not generated from loaded radar data</div>
           </div>
         </div>
         <div class="canvas-wrap"><svg id="futureView" role="img" aria-label="4D view concept with vertical slice plane"></svg></div>
         <div class="object-label">Storm Object — inferred</div>
-        <div class="view-note">4D concept view keeps observed radar fields visually separate from the single inferred object label. No extra products are represented.</div>
+        <div class="view-note">4D concept view is not generated from loaded radar data yet. Observed fields remain in the 2.5D field_preview layer; object label is inferred/mock.</div>
       </section>
     </main>
 
@@ -475,6 +506,13 @@
     function canonicalField(value) { return fieldAliases[String(value || '').trim().toUpperCase()] || String(value || 'REF').trim().toUpperCase(); }
     function fieldInfo(value) { const key = canonicalField(value); return { key, ...(fieldVocabulary[key] || { label: key || 'Field', units: 'unknown', kind: 'unknown', legend: `${key || 'Field'} (unknown)`, scaleClass: 'unknownScale' }) }; }
     const C = { grid:'#28445f', ink:'#edf7ff', muted:'#8ea9c4', cyan:'#66d9ff', green:'#54d68b', yellow:'#ffd166', orange:'#ff9f43', red:'#ff586b', mag:'#d76dff' };
+    const ATD_REFLECTIVITY_STOPS = [
+      { value: 90, color: '#050505' }, { value: 80, color: '#00e5ff' }, { value: 70, color: '#c026d3' },
+      { value: 60, color: '#ffffff' }, { value: 50, color: '#dc2626' }, { value: 40, color: '#f97316' },
+      { value: 30, color: '#fde047' }, { value: 20, color: '#22c55e' }, { value: 10, color: '#166534' },
+      { value: 0, color: '#60a5fa' }, { value: -10, color: '#64748b' }, { value: -20, color: '#7c3aed' },
+      { value: -30, color: '#1f102f' },
+    ];
     function node(tag, attrs = {}) { const n = document.createElementNS(NS, tag); for (const [k,v] of Object.entries(attrs)) n.setAttribute(k, v); return n; }
     function text(x, y, value, size = 14, fill = C.ink, weight = 650) { const t = node('text', { x, y, fill, 'font-size': size, 'font-weight': weight, 'font-family': 'Inter, system-ui, sans-serif' }); t.textContent = value; return t; }
     function pathFrom(points) { return points.map((p, i) => `${i ? 'L' : 'M'}${p[0]} ${p[1]}`).join(' ') + ' Z'; }
@@ -531,12 +569,23 @@
       for (let i=0;i<44;i++) svg.appendChild(node('circle',{cx:245+Math.sin(i*1.7)*180,cy:396+Math.cos(i*2.1)*96,r:1.4,fill:'rgba(90,190,255,.42)'}));
     }
     function renderObservedQuicklookFrame(svg, frame) {
-      if (!frame || !frame.quicklook_exists || !frame.quicklook_path) return false;
-      const href = joinPath(cockpitState.bundleRoot || '.', frame.quicklook_path);
-      svg.appendChild(node('image', { href, x:72, y:116, width:720, height:410, preserveAspectRatio:'xMidYMid meet', opacity:.92 }));
-      svg.appendChild(text(52,78,'observed_native_quicklook_png displayed',15,C.ink,850));
-      svg.appendChild(text(52,102,'2.5D browse from manifest quicklook_path · not gridded 3D volume retrieval',13,'#aec2d5',650));
-      return true;
+      // Legacy hook retained for tests/history. Quicklook is no longer a primary map layer.
+      return Boolean(frame && frame.quicklook_exists && frame.quicklook_path);
+    }
+    function renderQuicklookDock() {
+      const img = document.getElementById('quicklookThumb');
+      const status = document.getElementById('quicklookStatus');
+      const frame = currentFrame();
+      if (!img || !status) return;
+      if (frame && frame.quicklook_exists && frame.quicklook_path) {
+        img.src = joinPath(cockpitState.bundleRoot || '.', frame.quicklook_path);
+        img.style.display = 'block';
+        status.textContent = 'observed_native_quicklook_reference_only · quicklook PNG kept as reference only; primary layer is field_preview sampled gates when loaded.';
+      } else {
+        img.removeAttribute('src');
+        img.style.display = 'none';
+        status.textContent = 'No quicklook PNG available for selected frame.';
+      }
     }
     function drawVelocityCore(svg) {
       svg.appendChild(node('path', { d: blob(392, 292, 210, 62, 8), fill:C.green, opacity:.60, stroke:'rgba(255,255,255,.13)', 'stroke-width':1, transform:'rotate(-14 392 292)', filter:'url(#softGlow)' }));
@@ -548,6 +597,271 @@
       svg.appendChild(node('path', { d: blob(420, 288, 225, 64, 12), fill:C.cyan, opacity:.56, stroke:'rgba(255,255,255,.13)', 'stroke-width':1, transform:'rotate(-14 420 288)', filter:'url(#softGlow)' }));
       svg.appendChild(node('path', { d: blob(470, 260, 112, 34, 13), fill:C.yellow, opacity:.66, stroke:'rgba(255,255,255,.13)', 'stroke-width':1, transform:'rotate(-14 470 260)', filter:'url(#softGlow)' }));
       svg.appendChild(text(494,292,'spectrum width · turbulent spread guide',13,'#d9ecff',800));
+    }
+
+    function currentFieldPreview() {
+      const frames = cockpitState.fieldPreviewPlaylist?.frames ?? [];
+      if (frames.length) {
+        const targetFrame = currentFrame();
+        const currentField = targetFrame ? canonicalField(targetFrame.field) : canonicalField(fieldSelect?.value);
+        const currentSweep = targetFrame?.sweep_name || sweepSelect?.value;
+        const ordinal = Number(cockpitState.currentVolumeOrdinal) || 0;
+        const sameSelection = frames.filter(record => {
+          const preview = record?.preview;
+          return canonicalField(preview?.field?.name) === currentField && (!currentSweep || preview?.sweep?.name === currentSweep);
+        });
+        const ordinalMatch = sameSelection.find(record => Number(record.frame_index ?? -1) === ordinal);
+        return (ordinalMatch || sameSelection[Math.max(0, Math.min(sameSelection.length - 1, ordinal))] || frames[Math.max(0, Math.min(frames.length - 1, ordinal))] || frames[0])?.preview ?? null;
+      }
+      return cockpitState.fieldPreview;
+    }
+    function previousFieldPreview() {
+      const frames = cockpitState.fieldPreviewPlaylist?.frames ?? [];
+      if (frames.length < 2) return null;
+      const index = Math.max(0, Math.min(frames.length - 1, Number(cockpitState.currentVolumeOrdinal) || 0));
+      return index > 0 ? frames[index - 1]?.preview ?? null : null;
+    }
+    function clearCanvas(canvas, label) {
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#07101c';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#8ea9c4';
+      ctx.font = '14px JetBrains Mono, monospace';
+      ctx.fillText(label, 24, 36);
+    }
+    function atdReflectivityColor(value) {
+      const stops = [...ATD_REFLECTIVITY_STOPS].sort((a, b) => a.value - b.value);
+      if (value <= stops[0].value) return stops[0].color;
+      for (let i = 0; i < stops.length - 1; i++) if (value <= stops[i + 1].value) return stops[i].color;
+      return stops[stops.length - 1].color;
+    }
+    function colorForField(fieldName, value, vmin, vmax) {
+      const key = canonicalField(fieldName);
+      if (key === 'REF' || ['DBZ','DZ','ZH'].includes(String(fieldName || '').toUpperCase())) return atdReflectivityColor(value);
+      const t = Math.max(0, Math.min(1, (value - vmin) / Math.max(0.001, vmax - vmin)));
+      if (key === 'VEL') {
+        const r = Math.round(70 + 210 * t);
+        const g = Math.round(120 + 70 * (1 - Math.abs(t - 0.5) * 2));
+        const b = Math.round(235 - 175 * t);
+        return `rgb(${r},${g},${b})`;
+      }
+      const gray = Math.round(55 + 190 * t);
+      return `rgb(${gray},${Math.round(gray * .95)},${Math.round(110 + 120 * t)})`;
+    }
+    function previewGeometry(preview, canvas, mode = 'native-polar') {
+      const width = canvas.width;
+      const height = canvas.height;
+      const size = Math.min(width, height);
+      const ranges = (preview?.coordinates?.range_m ?? []).map(Number).filter(Number.isFinite);
+      const maxRange = Math.max(1, ...ranges);
+      const radius = size * (mode === 'native-polar' ? 0.43 : 0.39);
+      return { width, height, size, centerX: width / 2, centerY: mode === 'native-polar' ? height / 2 : height * 0.58, maxRange, radius, scale: radius / maxRange };
+    }
+    function drawPreviousFrameGhost(canvas, current, previous) {
+      if (!previous || !current) return;
+      const ctx = canvas.getContext('2d');
+      const geom = previewGeometry(previous, canvas, cockpitState.sceneMode);
+      const yScale = cockpitState.sceneMode === 'native-polar' ? 1 : Math.cos((90 - cockpitState.sceneTiltDeg) * Math.PI / 180);
+      const ranges = previous.coordinates?.range_m ?? [];
+      const azimuths = previous.coordinates?.azimuth_deg ?? [];
+      const values = previous.values ?? [];
+      ctx.save();
+      ctx.fillStyle = 'rgba(255,255,255,.16)';
+      for (let ri = 0; ri < values.length; ri++) {
+        const az = (Number(azimuths[ri]) || 0) * Math.PI / 180;
+        const sin = Math.sin(az), cos = Math.cos(az);
+        for (let gi = 0; gi < (values[ri] ?? []).length; gi++) {
+          const value = Number(values[ri][gi]);
+          const range = Number(ranges[gi]);
+          if (!Number.isFinite(value) || !Number.isFinite(range)) continue;
+          const x = geom.centerX + range * geom.scale * sin;
+          const y = geom.centerY - range * geom.scale * cos * yScale;
+          ctx.fillRect(x - .75, y - .75, 1.5, 1.5);
+        }
+      }
+      ctx.fillStyle = 'rgba(248,250,252,.62)';
+      ctx.font = '10px JetBrains Mono, monospace';
+      ctx.fillText('previous-frame change ghost • sampled gates only', 18, canvas.height - 34);
+      ctx.restore();
+    }
+    function valueHeightPx(value, vmin, vmax) {
+      const t = Math.max(0, Math.min(1, (Number(value) - vmin) / Math.max(0.001, vmax - vmin)));
+      return t * cockpitState.verticalExaggeration;
+    }
+    function drawTwoPointFiveDSlabPreview(canvas, preview) {
+      const ctx = canvas.getContext('2d');
+      const geom = previewGeometry(preview, canvas, 'two-point-five-d');
+      const ranges = preview.coordinates?.range_m ?? [];
+      const azimuths = preview.coordinates?.azimuth_deg ?? [];
+      const values = preview.values ?? [];
+      const fieldName = String(preview.field?.name ?? '').toUpperCase();
+      const stats = preview.field?.stats ?? {};
+      const vmin = Number.isFinite(stats.min) ? stats.min : 0;
+      const vmax = Number.isFinite(stats.max) ? stats.max : 1;
+      const tilt = Math.cos((90 - cockpitState.sceneTiltDeg) * Math.PI / 180);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#07101c'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.save();
+      ctx.translate(geom.centerX, geom.centerY);
+      ctx.strokeStyle = 'rgba(120,140,170,.18)'; ctx.lineWidth = 1;
+      for (let r = geom.maxRange / 4; r <= geom.maxRange + .001; r += geom.maxRange / 4) { ctx.beginPath(); ctx.ellipse(0,0,r*geom.scale,r*geom.scale*tilt,0,0,Math.PI*2); ctx.stroke(); }
+      for (let ri = 0; ri < values.length; ri++) {
+        const az = (Number(azimuths[ri]) || 0) * Math.PI / 180;
+        const sin = Math.sin(az), cos = Math.cos(az);
+        for (let gi = 0; gi < (values[ri] ?? []).length; gi++) {
+          const value = values[ri][gi], range = Number(ranges[gi]);
+          if (value === null || value === undefined || !Number.isFinite(Number(value)) || !Number.isFinite(range)) continue;
+          const baseX = range * geom.scale * sin;
+          const baseY = -range * geom.scale * cos * tilt;
+          const h = valueHeightPx(value, vmin, vmax);
+          ctx.fillStyle = colorForField(fieldName, Number(value), vmin, vmax);
+          ctx.fillRect(baseX - 1.4, baseY - h - 1.4, 3, Math.max(3, h * .35 + 3));
+        }
+      }
+      ctx.restore();
+      ctx.fillStyle = 'rgba(7,10,18,.88)'; ctx.fillRect(0,0,canvas.width,72);
+      ctx.fillStyle = '#edf7ff'; ctx.font = '13px Inter, system-ui'; ctx.fillText(`${preview.field?.name ?? 'field'} • 2.5D slab from observed gates`, 18, 24);
+      ctx.fillStyle = '#8ea9c4'; ctx.font = '11px JetBrains Mono, monospace';
+      ctx.fillText('observed_native_gates_not_gridded_not_interpolated • not a vertical retrieval', 18, 43);
+      ctx.fillText(`tilt ${cockpitState.sceneTiltDeg}° • visual exaggeration ${cockpitState.verticalExaggeration}px`, 18, 60);
+    }
+    function drawNativePolarPreview(canvas, preview) {
+      const ctx = canvas.getContext('2d');
+      const geom = previewGeometry(preview, canvas, 'native-polar');
+      const ranges = preview.coordinates?.range_m ?? [];
+      const azimuths = preview.coordinates?.azimuth_deg ?? [];
+      const values = preview.values ?? [];
+      const fieldName = String(preview.field?.name ?? '').toUpperCase();
+      const stats = preview.field?.stats ?? {};
+      const vmin = Number.isFinite(stats.min) ? stats.min : 0;
+      const vmax = Number.isFinite(stats.max) ? stats.max : 1;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#07101c'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.strokeStyle = 'rgba(120,140,170,.22)'; ctx.lineWidth = 1;
+      for (let r = geom.maxRange / 4; r <= geom.maxRange + .001; r += geom.maxRange / 4) { ctx.beginPath(); ctx.arc(geom.centerX, geom.centerY, r * geom.scale, 0, Math.PI * 2); ctx.stroke(); }
+      ctx.strokeStyle = 'rgba(120,140,170,.18)';
+      ctx.beginPath(); ctx.moveTo(geom.centerX, geom.centerY - geom.radius); ctx.lineTo(geom.centerX, geom.centerY + geom.radius); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(geom.centerX - geom.radius, geom.centerY); ctx.lineTo(geom.centerX + geom.radius, geom.centerY); ctx.stroke();
+      for (let ri = 0; ri < values.length; ri++) {
+        const az = (Number(azimuths[ri]) || 0) * Math.PI / 180;
+        const sin = Math.sin(az), cos = Math.cos(az);
+        for (let gi = 0; gi < (values[ri] ?? []).length; gi++) {
+          const value = values[ri][gi], range = Number(ranges[gi]);
+          if (value === null || value === undefined || !Number.isFinite(Number(value)) || !Number.isFinite(range)) continue;
+          const x = geom.centerX + range * geom.scale * sin;
+          const y = geom.centerY - range * geom.scale * cos;
+          ctx.fillStyle = colorForField(fieldName, Number(value), vmin, vmax);
+          ctx.fillRect(x - 1, y - 1, 3, 3);
+        }
+      }
+      ctx.fillStyle = 'rgba(7,10,18,.88)'; ctx.fillRect(0,0,canvas.width,58);
+      ctx.fillStyle = '#edf7ff'; ctx.font = '13px Inter, system-ui'; ctx.fillText(`${preview.field?.name ?? 'field'} • observed native polar sweep`, 18, 24);
+      ctx.fillStyle = '#8ea9c4'; ctx.font = '11px JetBrains Mono, monospace'; ctx.fillText('sampled gates only • no gridding/interpolation • not 3D', 18, 43);
+    }
+    function drawScanSweepOverlay(canvas, preview) {
+      const ctx = canvas.getContext('2d');
+      const geom = previewGeometry(preview, canvas, cockpitState.sceneMode);
+      const yScale = cockpitState.sceneMode === 'native-polar' ? 1 : Math.cos((90 - cockpitState.sceneTiltDeg) * Math.PI / 180);
+      const az = (cockpitState.animationPhase - 90) * Math.PI / 180;
+      ctx.save();
+      ctx.strokeStyle = 'rgba(190,190,255,.44)'; ctx.lineWidth = 1.4;
+      ctx.beginPath(); ctx.moveTo(geom.centerX, geom.centerY); ctx.lineTo(geom.centerX + Math.cos(az) * geom.radius, geom.centerY + Math.sin(az) * geom.radius * yScale); ctx.stroke();
+      ctx.fillStyle = '#8ea9c4'; ctx.font = '10px JetBrains Mono, monospace'; ctx.fillText(`sweep cue ${Math.round(cockpitState.animationPhase)}° • ${Math.round(geom.maxRange / 1000)} km`, 18, canvas.height - 18);
+      ctx.restore();
+    }
+    function projectLatLonToSketch(lat, lon, site, pixelsPerKm = 1) {
+      const earthRadiusKm = 6371;
+      const dLat = (Number(lat) - Number(site.latitude_deg)) * Math.PI / 180;
+      const dLon = (Number(lon) - Number(site.longitude_deg)) * Math.PI / 180;
+      const meanLat = ((Number(lat) + Number(site.latitude_deg)) / 2) * Math.PI / 180;
+      return { x: dLon * earthRadiusKm * Math.cos(meanLat) * pixelsPerKm, y: -dLat * earthRadiusKm * pixelsPerKm };
+    }
+    function overlayList(value) { return !value ? [] : (Array.isArray(value) ? value : [value]); }
+    function drawOverlayPolyline(ctx, points, site, cx, cy, pixelsPerKm, color, close = false) {
+      const projected = overlayList(points).map(point => projectLatLonToSketch(point.latitude_deg ?? point.lat, point.longitude_deg ?? point.lon, site, pixelsPerKm)).filter(point => Number.isFinite(point.x) && Number.isFinite(point.y));
+      if (projected.length < 2) return;
+      ctx.save(); ctx.beginPath();
+      projected.forEach((point, i) => i ? ctx.lineTo(cx + point.x, cy + point.y) : ctx.moveTo(cx + point.x, cy + point.y));
+      if (close) ctx.closePath();
+      ctx.strokeStyle = color; ctx.lineWidth = close ? 2.2 : 1.1; ctx.stroke();
+      if (close) { ctx.fillStyle = 'rgba(250,204,21,.12)'; ctx.fill(); }
+      ctx.restore();
+    }
+    function drawCanvasWarningCorridor(ctx, corridor, site, cx, cy, pixelsPerKm) {
+      drawOverlayPolyline(ctx, corridor.points ?? corridor.polygon ?? corridor.coordinates ?? [], site, cx, cy, pixelsPerKm, 'rgba(250,204,21,.95)', true);
+      ctx.fillStyle = 'rgba(250,204,21,.95)'; ctx.font = '10px Inter, system-ui';
+      if (corridor.label) ctx.fillText(corridor.label, cx + 18, cy - 18);
+    }
+    function boxesOverlap(a, b, padding = 3) { return !(a.x + a.w + padding < b.x || b.x + b.w + padding < a.x || a.y + a.h + padding < b.y || b.y + b.h + padding < a.y); }
+    function drawTownPoint(ctx, x, y) { ctx.fillStyle = 'rgba(248,250,252,.92)'; ctx.beginPath(); ctx.arc(x, y, 2.6, 0, Math.PI * 2); ctx.fill(); }
+    function placeTownLabel(ctx, town, x, y, labelBoxes, width, height) {
+      const priority = Number(town.label_priority ?? town.priority ?? 2); if (priority >= 3) return false;
+      const label = town.name ?? 'town'; const textWidth = ctx.measureText(label).width;
+      const box = { x: x + 7, y: y - 17, w: textWidth + 4, h: 13 };
+      if (box.x > 2 && box.y > 2 && box.x + box.w < width - 2 && !labelBoxes.some(existing => boxesOverlap(box, existing))) {
+        ctx.fillStyle = 'rgba(248,250,252,.9)'; ctx.fillText(label, x + 7, y - 6); labelBoxes.push(box); return true;
+      }
+      return false;
+    }
+    function countMapOverlayLayers(overlays = cockpitState.mapOverlays) {
+      return { towns: overlayList(overlays?.town_points).length, warningCorridors: overlayList(overlays?.warning_corridors ?? overlays?.warning_corridor).length, countyBoundaries: overlayList(overlays?.county_boundaries).length, stateBoundaries: overlayList(overlays?.state_boundaries).length };
+    }
+    function drawMapOverlays(ctx, preview, cx, cy, pixelsPerKm) {
+      const overlays = cockpitState.mapOverlays;
+      const site = preview.site ?? {};
+      if (!overlays || site.latitude_deg === null || site.longitude_deg === null || site.latitude_deg === undefined || site.longitude_deg === undefined) return countMapOverlayLayers(null);
+      ctx.save();
+      overlayList(overlays.state_boundaries).forEach(line => drawOverlayPolyline(ctx, line.points ?? line.coordinates ?? [], site, cx, cy, pixelsPerKm, 'rgba(148,163,184,.58)'));
+      overlayList(overlays.county_boundaries).forEach(line => drawOverlayPolyline(ctx, line.points ?? line.coordinates ?? [], site, cx, cy, pixelsPerKm, 'rgba(100,116,139,.46)'));
+      overlayList(overlays.warning_corridors ?? overlays.warning_corridor).forEach(corridor => drawCanvasWarningCorridor(ctx, corridor, site, cx, cy, pixelsPerKm));
+      ctx.font = '10px Inter, system-ui';
+      const labelBoxes = [];
+      overlayList(overlays.town_points).forEach(town => {
+        const point = projectLatLonToSketch(town.latitude_deg ?? town.lat, town.longitude_deg ?? town.lon, site, pixelsPerKm);
+        if (!Number.isFinite(point.x) || !Number.isFinite(point.y)) return;
+        const x = cx + point.x, y = cy + point.y;
+        drawTownPoint(ctx, x, y); placeTownLabel(ctx, town, x, y, labelBoxes, ctx.canvas.width, ctx.canvas.height);
+      });
+      ctx.restore();
+      return countMapOverlayLayers(overlays);
+    }
+    function drawMapContextOnPrimary(canvas, preview) {
+      const ctx = canvas.getContext('2d');
+      const geom = previewGeometry(preview, canvas, cockpitState.sceneMode);
+      const site = preview.site ?? {};
+      const rangeKm = geom.maxRange / 1000;
+      const pixelsPerKm = geom.radius / Math.max(1, rangeKm);
+      const counts = drawMapOverlays(ctx, preview, geom.centerX, geom.centerY, pixelsPerKm);
+      ctx.save();
+      ctx.fillStyle = 'rgba(7,10,18,.72)'; ctx.fillRect(canvas.width - 332, canvas.height - 92, 314, 72);
+      ctx.fillStyle = '#d9ecff'; ctx.font = '11px Inter, system-ui'; ctx.fillText('stormdeck.map_overlays.v0 context overlays only', canvas.width - 318, canvas.height - 66);
+      ctx.fillStyle = '#8ea9c4'; ctx.font = '10px JetBrains Mono, monospace';
+      ctx.fillText(`towns ${counts.towns} · corridors ${counts.warningCorridors} · counties ${counts.countyBoundaries} · states ${counts.stateBoundaries}`, canvas.width - 318, canvas.height - 48);
+      ctx.fillText('warning corridor geometry is schematic context · radar gates not gridded', canvas.width - 318, canvas.height - 30);
+      ctx.restore();
+    }
+    function renderPrimaryFieldLayer() {
+      const canvas = document.getElementById('replayFieldCanvas');
+      const preview = currentFieldPreview();
+      if (!canvas) return false;
+      if (!preview) { clearCanvas(canvas, 'No field_preview artifact loaded · quicklook dock only'); return false; }
+      if (cockpitState.sceneMode === 'two-point-five-d') drawTwoPointFiveDSlabPreview(canvas, preview); else drawNativePolarPreview(canvas, preview);
+      drawPreviousFrameGhost(canvas, preview, previousFieldPreview());
+      drawMapContextOnPrimary(canvas, preview);
+      drawScanSweepOverlay(canvas, preview);
+      return true;
+    }
+    function renderFieldPreviewStatus() {
+      const target = document.getElementById('fieldPreviewStatus');
+      if (!target) return;
+      const preview = currentFieldPreview();
+      const frameCount = cockpitState.fieldPreviewPlaylist?.frames?.length ?? 0;
+      const overlays = countMapOverlayLayers(cockpitState.mapOverlays);
+      target.textContent = preview
+        ? `Primary: stormdeck.field_preview observed sampled gates (${frameCount ? `${frameCount} frame playlist` : 'single frame'}). Map overlays: ${overlays.towns} towns, ${overlays.warningCorridors} corridors, ${overlays.countyBoundaries} county lines, ${overlays.stateBoundaries} state lines. Cross-section/4D are concept only, not generated from loaded radar data.`
+        : 'Primary field_preview not loaded. Quicklook PNG is reference only; mock guide remains disabled from claiming real data.';
     }
     function drawActiveField(svg) {
       const frame = currentFrame();
@@ -689,16 +1003,29 @@
       svg.addEventListener('pointerleave', () => { activeSliceHandle = null; });
     }
     function drawReplayMap() {
-      const svg = document.getElementById('replayMap'); setViewBox(svg);
-      svg.appendChild(node('path', { d:'M285 420 L86 126 A360 360 0 0 1 666 208 Z', fill:'rgba(102,217,255,.045)', stroke:'rgba(102,217,255,.16)', 'stroke-width':2 }));
-      drawMapLabels(svg); drawRangeRings(svg); drawWarningCorridor(svg); drawActiveField(svg); drawSliceControls(svg);
+      const hasRealFieldPreview = renderPrimaryFieldLayer();
+      renderQuicklookDock();
+      renderFieldPreviewStatus();
+      const svg = document.getElementById('replayMap');
+      svg.setAttribute('viewBox', '0 0 900 620');
+      svg.replaceChildren();
+      const defs = node('defs');
+      const filter = node('filter', { id:'softGlow', x:'-30%', y:'-30%', width:'160%', height:'160%' });
+      filter.appendChild(node('feDropShadow',{dx:0,dy:0,stdDeviation:3,'flood-color':'#66d9ff','flood-opacity':.22}));
+      defs.appendChild(filter); svg.appendChild(defs);
+      if (hasRealFieldPreview) {
+        drawSliceControls(svg);
+        svg.appendChild(text(52,78,'observed-gate field_preview primary layer',15,C.ink,850));
+        svg.appendChild(text(52,102,'stormdeck.field_preview.v0 sampled gates · map_overlays.json context · no gridding/interpolation',13,'#aec2d5',650));
+      } else {
+        svg.appendChild(node('rect', { x:0, y:0, width:900, height:620, fill:'rgba(7,16,28,.78)' }));
+        svg.appendChild(node('path', { d:'M285 420 L86 126 A360 360 0 0 1 666 208 Z', fill:'rgba(102,217,255,.045)', stroke:'rgba(102,217,255,.16)', 'stroke-width':2 }));
+        drawMapLabels(svg); drawRangeRings(svg); drawWarningCorridor(svg); drawActiveField(svg); drawSliceControls(svg);
+        svg.appendChild(text(52,78,'2.5D visual emphasis; observed-gate source; not full volume retrieval until field_preview loads',15,C.ink,850));
+        svg.appendChild(text(52,102,'Mock guide until field_preview.json or field_preview_playlist.json loads · sample browse only — not time-continuous storm motion',13,'#aec2d5',650));
+      }
       svg.appendChild(node('circle',{cx:285,cy:420,r:16,fill:'none',stroke:'rgba(102,217,255,.46)','stroke-width':3}));
       svg.appendChild(node('circle',{cx:285,cy:420,r:8,fill:C.cyan,stroke:'#07101c','stroke-width':3}));
-      const frame = currentFrame();
-      if (!frame || !frame.quicklook_exists || !frame.quicklook_path) {
-        svg.appendChild(text(52,78,'2.5D visual emphasis; observed-gate source; not full volume retrieval',15,C.ink,850));
-        svg.appendChild(text(52,102,'Mock guide until a bundle manifest loads · sample browse only — not time-continuous storm motion',13,'#aec2d5',650));
-      }
     }
     function drawCrossSection() {
       const svg = document.getElementById('crossSection'); svg.setAttribute('viewBox','0 0 900 240'); svg.replaceChildren(); svg.appendChild(node('rect',{x:0,y:0,width:900,height:240,fill:'#07101c'}));
@@ -787,16 +1114,19 @@
       const sweep = sweepSelect.value;
       const frame = syncCurrentFrameToSelection();
       const info = fieldInfo(field);
+      const realFieldPreview = Boolean(currentFieldPreview());
       const realQuicklook = Boolean(frame && frame.quicklook_exists && frame.quicklook_path);
       legendTitle.textContent = info.legend;
       const legend = document.querySelector('.legend-dock');
       legend.classList.toggle('velocityScale', info.kind === 'velocity');
       legend.classList.toggle('spectrumWidthScale', info.kind === 'spectrum_width');
-      legendProvenance.textContent = realQuicklook ? 'Provenance: observed_native_quicklook_png displayed · Transform status visible in export' : 'Provenance: mock_visual_guide_not_real_data · Transform status visible in export';
-      replayViewScope.textContent = `${info.label} · ${sweep} sweep · ${info.units} · ${realQuicklook ? 'observed quicklook browse' : 'mock visual guide'} · warning corridor`;
+      legendProvenance.textContent = realFieldPreview ? 'Provenance: stormdeck.field_preview observed sampled gates · quicklook retained as reference' : (realQuicklook ? 'Provenance: observed_native_quicklook_reference_only · field_preview artifact not loaded' : 'Provenance: mock_visual_guide_not_real_data · Transform status visible in export');
+      replayViewScope.textContent = `${info.label} · ${sweep} sweep · ${info.units} · ${realFieldPreview ? 'observed field_preview primary layer' : (realQuicklook ? 'quicklook reference only' : 'mock visual guide')} · map_overlays context`;
       scanAgeBadge.textContent = frame ? `Replay volume ${Number(frame.volume_ordinal || 0) + 1}/${Math.max(1, manifestVolumeOrdinals().length)} · scan age not live · ${frame.interpretation_limit || 'sample browse only — not time-continuous storm motion'}` : `Latest scan age unavailable · mock visual guide`;
       playbackStatus.textContent = `Paused · ${field} · ${sweep} · volume ${frame ? Number(frame.volume_ordinal || 0) + 1 : 1}`;
       updateProvenancePanel();
+      renderQuicklookDock();
+      renderFieldPreviewStatus();
       drawReplayMap();
       drawCrossSection();
     }
@@ -955,8 +1285,9 @@
       const manifest = cockpitState.engineManifest;
       qcRadarId.textContent = (manifest && (manifest.radar_id || manifest.site || manifest.case_id)) || 'KATD';
       qcScanTime.textContent = frame ? (frame.volume_start_time || frameTimeLabel(frame)) : '20:11:24Z';
+      const realFieldPreview = Boolean(currentFieldPreview());
       const realQuicklook = Boolean(frame && frame.quicklook_exists && frame.quicklook_path);
-      qcTransformStatus.textContent = realQuicklook ? 'observed_native_quicklook_png displayed' : 'mock_visual_guide_not_real_data';
+      qcTransformStatus.textContent = realFieldPreview ? 'observed_field_preview_sampled_gates' : (realQuicklook ? 'observed_native_quicklook_reference_only' : 'mock_visual_guide_not_real_data');
       qcStatus.textContent = 'QC pending';
       manifestStatus.textContent = manifest ? `Manifest: ${manifest.schema || 'stormdeck_bundle_manifest.json'} · ${manifest.frame_count || (manifest.frames || []).length || 0} frames · quicklook validation is not QC · field_value_deltas_included: false` : 'Manifest: mock visual guide · field_value_deltas_included: false';
       renderWhatChangedUnavailable();
@@ -977,12 +1308,35 @@
       updateProvenancePanel();
       applyFieldAndSweep();
     }
+    async function loadOptionalCockpitArtifacts(root) {
+      cockpitState.fieldPreview = null;
+      cockpitState.fieldPreviewPlaylist = null;
+      cockpitState.mapOverlays = null;
+      try {
+        const playlist = await fetchJson(joinPath(root, 'field_preview_playlist.json'));
+        if (playlist?.schema === 'stormdeck.field_preview_playlist.v0') cockpitState.fieldPreviewPlaylist = playlist;
+      } catch (playlistError) {
+        try {
+          const preview = await fetchJson(joinPath(root, 'field_preview.json'));
+          if (preview?.schema === 'stormdeck.field_preview.v0') cockpitState.fieldPreview = preview;
+        } catch (previewError) {
+          cockpitState.fieldPreview = null;
+        }
+      }
+      try {
+        const overlays = await fetchJson(joinPath(root, 'map_overlays.json'));
+        if (overlays?.schema === 'stormdeck.map_overlays.v0') cockpitState.mapOverlays = overlays;
+      } catch (overlayError) {
+        cockpitState.mapOverlays = null;
+      }
+    }
     async function loadCockpitBundle() {
       const root = bundleRootInput.value.trim() || '.';
       cockpitState.bundleRoot = root;
       manifestStatus.textContent = 'Manifest: loading stormdeck_bundle_manifest.json';
       try {
         const manifest = await fetchJson(joinPath(root, 'stormdeck_bundle_manifest.json'));
+        await loadOptionalCockpitArtifacts(root);
         applyManifestToCockpit(manifest);
         try {
           cockpitState.validation = await fetchJson(joinPath(root, 'bundle_validation.json'));
@@ -1025,7 +1379,7 @@
     const qcScanTime = document.getElementById('qcScanTime');
     const qcTransformStatus = document.getElementById('qcTransformStatus');
     const qcStatus = document.getElementById('qcStatus');
-    const cockpitState = { bundleRoot: '.', engineManifest: null, validation: null, currentFrameIndex: 0, currentVolumeOrdinal: 0 };
+    const cockpitState = { bundleRoot: '.', engineManifest: null, validation: null, currentFrameIndex: 0, currentVolumeOrdinal: 0, fieldPreview: null, fieldPreviewPlaylist: null, mapOverlays: null, sceneMode: 'native-polar', sceneTiltDeg: 42, verticalExaggeration: 30, animationPhase: 0 };
     const replayTimes = ['19:51:24', '20:01:24', '20:11:24', '20:21:24', '20:31:24'];
     let playbackFrame = 2;
     let playbackTimer = null;

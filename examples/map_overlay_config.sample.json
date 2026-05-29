@@ -5,7 +5,14 @@
   "towns": [
     { "name": "Norman", "latitude_deg": 35.2226, "longitude_deg": -97.4395, "label_priority": 1 },
     { "name": "Moore", "latitude_deg": 35.3395, "longitude_deg": -97.4867, "label_priority": 2 },
-    { "name": "Newcastle", "latitude_deg": 35.2473, "longitude_deg": -97.5998, "label_priority": 3 }
+    { "name": "Newcastle", "latitude_deg": 35.2473, "longitude_deg": -97.5998, "label_priority": 3 },
+    { "name": "Noble", "latitude_deg": 35.1392, "longitude_deg": -97.3948, "label_priority": 2 },
+    { "name": "Purcell", "latitude_deg": 35.0137, "longitude_deg": -97.3611, "label_priority": 2 },
+    { "name": "Blanchard", "latitude_deg": 35.1378, "longitude_deg": -97.6581, "label_priority": 2 },
+    { "name": "Chickasha", "latitude_deg": 35.0526, "longitude_deg": -97.9364, "label_priority": 2 },
+    { "name": "Shawnee", "latitude_deg": 35.3273, "longitude_deg": -96.9253, "label_priority": 2 },
+    { "name": "Tecumseh", "latitude_deg": 35.2578, "longitude_deg": -96.9367, "label_priority": 3 },
+    { "name": "Seminole", "latitude_deg": 35.2245, "longitude_deg": -96.6706, "label_priority": 3 }
   ],
   "warning_corridors": [
     {

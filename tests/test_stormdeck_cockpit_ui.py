@@ -76,6 +76,7 @@ def test_stormdeck_cockpit_ui_has_view_focused_structure_and_canvas_hooks():
     html = read_html()
 
     for element_id in [
+        "replayFieldCanvas",
         "replayMap",
         "crossSection",
         "futureView",
@@ -196,7 +197,10 @@ def test_reflectivity_legend_is_docked_not_overlaying_2_5d_view():
 
     assert 'class="replay-workspace"' in html
     assert 'class="legend-card legend-dock"' in html
-    assert 'grid-template-columns: minmax(0, 1fr) 120px' in html
+    assert 'id="quicklookDock"' in html
+    assert 'id="quicklookThumb"' in html
+    assert 'quicklook PNG kept as reference only' in html
+    assert 'grid-template-columns: minmax(0, 1fr) 156px' in html
     assert 'grid-template-columns: 1fr' in html
     assert 'grid-row: 2' in html
     assert 'grid-column: 2' in html
@@ -279,9 +283,11 @@ def test_cockpit_real_manifest_contract_handles_ref_vel_sw_quicklooks_and_qc_hon
         "SW: { label: 'Spectrum width', units: 'm/s'",
         "fieldInfo(",
         "renderObservedQuicklookFrame",
+        "renderQuicklookDock",
         "quicklook_exists",
         "quicklook_path",
-        "observed_native_quicklook_png displayed",
+        "observed_native_quicklook_reference_only",
+        "quicklook PNG kept as reference only",
         "mock_visual_guide_not_real_data",
         "QC pending",
         "missing/flag counts required",
@@ -402,5 +408,64 @@ def test_ab_slice_handles_have_large_user_hit_targets_and_keyboard_fallback():
         "keydown",
         "Dragging A handle",
         "Dragging B handle",
+    ]:
+        assert contract in html
+
+
+
+def test_cockpit_promotes_field_preview_canvas_over_quicklook_png():
+    html = read_html()
+
+    for contract in [
+        'id="replayFieldCanvas"',
+        'currentFieldPreview',
+        'previousFieldPreview',
+        'renderPrimaryFieldLayer',
+        'drawNativePolarPreview',
+        'drawTwoPointFiveDSlabPreview',
+        'drawPreviousFrameGhost',
+        'drawScanSweepOverlay',
+        'colorForField',
+        'atdReflectivityColor',
+        'stormdeck.field_preview.v0',
+        'stormdeck.field_preview_playlist.v0',
+        'observed-gate field_preview primary layer',
+        'observed_field_preview_sampled_gates',
+        'quicklook PNG kept as reference only',
+    ]:
+        assert contract in html
+
+    assert "primary layer is field_preview sampled gates" in html
+
+
+def test_cockpit_renders_meaningful_map_overlays_from_export():
+    html = read_html()
+
+    for contract in [
+        'mapOverlays',
+        'loadOptionalCockpitArtifacts',
+        'map_overlays.json',
+        'stormdeck.map_overlays.v0',
+        'projectLatLonToSketch',
+        'drawMapOverlays',
+        'drawOverlayPolyline',
+        'drawTownPoint',
+        'placeTownLabel',
+        'countMapOverlayLayers',
+        'warning corridor geometry is schematic context',
+        'radar gates not gridded',
+        'context overlays only',
+    ]:
+        assert contract in html
+
+
+def test_cockpit_labels_cross_section_and_4d_as_concept_not_loaded_data():
+    html = read_html()
+
+    for contract in [
+        'concept guide only · not generated from loaded radar data',
+        'concept only · not generated from loaded radar data',
+        '4D concept view is not generated from loaded radar data yet',
+        'Cross-section/4D are concept only, not generated from loaded radar data',
     ]:
         assert contract in html
